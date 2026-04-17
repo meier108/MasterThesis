@@ -16,6 +16,18 @@ def decode_sequence(encoded: np.ndarray, alphabet: List[str]) -> str:
 def encode_sequence(sequence: str, token_to_idx: Dict[str, int]) -> np.ndarray:
     return np.array([token_to_idx[token] for token in sequence], dtype=np.int32)
 
+def one_hot_encode_sequence(sequence: np.array, num_tokens:int) -> np.ndarray:
+    one_hot = np.zeros((len(sequence), num_tokens), dtype=np.float32)
+    for i, token in enumerate(sequence):
+        one_hot[i, int(token)] = 1.0
+    return one_hot.flatten()
+
+def one_hot_decode_sequence(encoded: np.ndarray, alphabet: List[str]) -> np.ndarray:
+    num_tokens = len(alphabet)
+    sequence_length = len(encoded) // num_tokens
+    one_hot = encoded.reshape((sequence_length, num_tokens))
+    decoded_sequence = "".join(alphabet[np.argmax(row)] for row in one_hot)
+    return decoded_sequence
 
 def load_tfbind8_data(
     transcription_factor: str = "SIX6_REF_R1",
@@ -47,45 +59,17 @@ def fit_surrogate_model(model, train_df: pd.DataFrame, token_to_idx: Dict[str, i
     x_train = np.stack(
         [encode_sequence(sequence, token_to_idx) for sequence in train_df["sequence"]]
     )
+    x_train_one_hot = np.stack([one_hot_encode_sequence(seq, num_tokens=len(token_to_idx)) for seq in x_train])
     y_train = train_df["binding_scores"].to_numpy(dtype=np.float32)
-    model.fit(x_train, y_train)
+    model.fit(x_train_one_hot, y_train)
     return model
 
 
 def predict_surrogate(model, sequence: str, token_to_idx: Dict[str, int]) -> float:
     encoded = encode_sequence(sequence, token_to_idx).reshape(1, -1)
-    prediction = model.predict(encoded)
+    one_hot_encoded = one_hot_encode_sequence(encoded.flatten(), num_tokens=len(token_to_idx)).reshape(1, -1)
+    prediction = model.predict(one_hot_encoded)
     return float(np.asarray(prediction).reshape(-1)[0])
-
-
-def compute_split_metrics(model, df: pd.DataFrame, token_to_idx: Dict[str, int], split_name: str):
-    split_df = df[df["split"] == split_name]
-    if split_df.empty:
-        return {
-            "split": split_name,
-            "n": 0,
-            "spearman_rho": np.nan,
-            "mse": np.nan,
-            "bias": np.nan,
-        }
-
-    x_split = np.stack(
-        [encode_sequence(sequence, token_to_idx) for sequence in split_df["sequence"]]
-    )
-    y_true = split_df["binding_scores"].to_numpy(dtype=np.float32)
-    y_pred = np.asarray(model.predict(x_split)).reshape(-1)
-
-    rho = spearmanr(y_true, y_pred).correlation
-    mse = mean_squared_error(y_true, y_pred)
-    bias = float(np.mean(y_pred - y_true))
-
-    return {
-        "split": split_name,
-        "n": int(len(split_df)),
-        "spearman_rho": float(rho) if rho is not None else np.nan,
-        "mse": float(mse),
-        "bias": bias,
-    }
 
 
 def run_mutation_trajectory(
@@ -97,83 +81,82 @@ def run_mutation_trajectory(
     target_split: str,
     num_rounds: int,
     mutants_per_round: int,
+    seen_sequences: set,
+    return_stats: bool = True,
 ):
     current_sequence = seed_sequence
     current_surrogate = predict_surrogate(surrogate_model, current_sequence, token_to_idx)
     current_oracle = sequence_oracle.evaluate(current_sequence)
 
     trajectory = []
-    total_candidates = 0
-    filtered_candidates = 0
+    stats = {
+        "generated": 0,
+        "skipped_seen": 0,
+        "skipped_wrong_split": 0,
+        "in_target_split": 0,
+        "invalid_oracle": 0,
+        "surrogate_improvements": 0,
+    }
 
+    # Append seed sequence. 
+    trajectory.append(
+                    {
+                        "round": 0,
+                        "sequence": current_sequence,
+                        "surrogate_score": current_surrogate,
+                        "oracle_score": current_oracle,
+                        "split": target_split,
+                    }
+                )
+    
     for round_idx in range(1, num_rounds + 1):
         mutants = [walker.mutate_sequence(current_sequence) for _ in range(mutants_per_round)]
-        total_candidates += len(mutants)
+        stats["generated"] += len(mutants)
 
-        valid_candidates = []
         for sequence in mutants:
+            # Skip already seen sequences
+            if seen_sequences is not None and sequence in seen_sequences:
+                stats["skipped_seen"] += 1
+                continue
+            if seen_sequences is not None:
+                seen_sequences.add(sequence)
+
+            # Skip sequences not in the target split
             split_name = sequence_oracle.get_split(sequence)
             if split_name != target_split:
+                stats["skipped_wrong_split"] += 1
                 continue
-
+            stats["in_target_split"] += 1
+            
+            # Skip sequences with invalid oracle scores -> should not happen
             oracle_score = sequence_oracle.evaluate(sequence)
             if oracle_score is None:
+                stats["invalid_oracle"] += 1
                 continue
 
             surrogate_score = predict_surrogate(surrogate_model, sequence, token_to_idx)
-            valid_candidates.append(
-                {
-                    "sequence": sequence,
-                    "split": split_name,
-                    "surrogate_score": float(surrogate_score),
-                    "oracle_score": float(oracle_score),
-                }
-            )
+        
+            if surrogate_score > current_surrogate:
+                current_sequence = sequence
+                current_surrogate = float(surrogate_score)
+                current_oracle = float(oracle_score)
+                stats["surrogate_improvements"] += 1
+                trajectory.append(
+                    {
+                        "round": round_idx,
+                        "sequence": current_sequence,
+                        "surrogate_score": current_surrogate,
+                        "oracle_score": current_oracle,
+                        "split": target_split,
+                    }
+                )
 
-        filtered_candidates += len(valid_candidates)
-        if not valid_candidates:
-            continue
+    result = {"trajectory": pd.DataFrame(trajectory)}
+    if return_stats:
+        result["stats"] = stats
+    return result
 
-        best = max(valid_candidates, key=lambda row: row["surrogate_score"])
-        if best["surrogate_score"] > current_surrogate:
-            current_sequence = best["sequence"]
-            current_surrogate = best["surrogate_score"]
-            current_oracle = best["oracle_score"]
-            trajectory.append(
-                {
-                    "round": round_idx,
-                    "sequence": current_sequence,
-                    "surrogate_score": current_surrogate,
-                    "oracle_score": current_oracle,
-                    "split": target_split,
-                }
-            )
-
-    summary = {
-        "seed_sequence": seed_sequence,
-        "seed_oracle_score": float(sequence_oracle.evaluate(seed_sequence)),
-        "final_sequence": current_sequence,
-        "final_surrogate_score": float(current_surrogate),
-        "final_oracle_score": float(current_oracle),
-        "target_split": target_split,
-        "num_rounds": num_rounds,
-        "mutants_per_round": mutants_per_round,
-        "total_candidates": total_candidates,
-        "valid_candidates_in_target_split": filtered_candidates,
-        "num_improvements": len(trajectory),
-    }
-
-    return {"trajectory": pd.DataFrame(trajectory), "summary": summary}
-
-
-def run_tfbind8_experiment(
-    model=None,
-    seed: int = 42,
-    transcription_factor: str = "SIX6_REF_R1",
-    target_split: str = "test_c",
-    num_rounds: int = 30,
-    mutants_per_round: int = 32,
-):
+def setup_experiment(seed: int, transcription_factor: str, model=None):
     np.random.seed(seed)
 
     alphabet = ["A", "C", "G", "T"]
@@ -182,36 +165,124 @@ def run_tfbind8_experiment(
     x, y = load_tfbind8_data(transcription_factor=transcription_factor)
     df = build_dataset_dataframe(x, y, alphabet)
     train_df = df[df["split"] == "train"].copy()
+    # Print range of train sequences
+    #print(f"Training sequences: {len(train_df)}")
+    #print(f"Training binding score range: {train_df['binding_scores'].min()} to {train_df['binding_scores'].max()}")
 
     if model is None:
         model = random_forest.RandomForestModel(n_estimators=200, random_state=seed)
 
-    model = fit_surrogate_model(model, train_df, token_to_idx)
+    surrogate = fit_surrogate_model(model, train_df, token_to_idx)
 
-    sequence_oracle = oracle.Oracle_TFBind8(df)
-    seed_sequence = train_df["sequence"].iloc[0]
-    walker = single_mutant_walker.SingleMutantWalker(alphabet, len(seed_sequence))
+    oracle_TF_bind = oracle.Oracle_TFBind8(df)
 
-    metrics = {
-        split: compute_split_metrics(model, df, token_to_idx, split)
-        for split in ["test_a", "test_b", "test_c"]
-    }
+    walker = single_mutant_walker.SingleMutantWalker(alphabet, len(train_df["sequence"].iloc[0]))
+    return train_df, oracle_TF_bind, walker, surrogate, token_to_idx
+
+def run_tfbind8_experiment(
+    model=None,
+    seed: int = 42,
+    transcription_factor: str = "SIX6_REF_R1",
+    target_split: str = "test_c",
+    num_rounds: int = 100,
+    mutants_per_round: int = 10,
+    change_seed_sequence: bool = True,
+    seed_quantile: float = 0.8,
+    return_stats: bool = True,
+):
+    train_df, oracle, walker, surrogate, token_to_idx = setup_experiment(
+        seed=seed,
+        transcription_factor=transcription_factor,
+        model=model
+    )
+
+    if change_seed_sequence is True:
+        # Choose a seed only from known training data (lab-realistic assumption).
+        top_percent_threshold = train_df["binding_scores"].quantile(seed_quantile)
+        seed_sequence = train_df[train_df["binding_scores"] >= top_percent_threshold]["sequence"].sample(
+            n=1, random_state=seed
+        ).iloc[0]
+        print(f"Selected seed sequence: {seed_sequence} with oracle score: {oracle.evaluate(seed_sequence)}")
+    else:
+        seed_sequence = train_df["sequence"].iloc[0]
+
+    seen_sequences = set(train_df["sequence"])
 
     trajectory_result = run_mutation_trajectory(
         seed_sequence=seed_sequence,
-        sequence_oracle=sequence_oracle,
-        surrogate_model=model,
+        sequence_oracle=oracle,
+        surrogate_model=surrogate,
         walker=walker,
         token_to_idx=token_to_idx,
         target_split=target_split,
         num_rounds=num_rounds,
         mutants_per_round=mutants_per_round,
+        seen_sequences=seen_sequences,
+        return_stats=return_stats,
     )
+    
+    return trajectory_result
 
-    return {
-        "df": df,
-        "train_df": train_df,
-        "model": model,
-        "metrics": metrics,
-        "trajectory": trajectory_result,
-    }
+
+def run_multiple_experiments(model = None, seed=42, test_sets=None, runs=10, change_seed_sequence=True, num_rounds=100, mutants_per_round=10, seed_quantile=0.2, return_stats=False):
+    '''Runs multiple experiments for different test sets from TFBind8 Dataset and rounds, collecting trajectories.'''
+    all_trajectories = []
+
+    train_df, oracle, walker, surrogate, token_to_idx = setup_experiment(
+            seed=seed,
+            transcription_factor="SIX6_REF_R1",
+            model=model
+            )
+    
+    for test_set in test_sets:
+        print(f"\nRunning experiment for {test_set}...")
+
+        for run in range(1, runs + 1):
+            print(f"Run {run}/{runs} for {test_set}...")
+
+            
+            if change_seed_sequence is True:
+            # choose a seed from the upper quantile of the known training split
+                top_percent_threshold = train_df["binding_scores"].quantile(seed_quantile)
+                seed_sequence = train_df[train_df["binding_scores"] >= top_percent_threshold]["sequence"].sample(
+                    n=1, random_state=seed + run
+                ).iloc[0]
+                print(f"Selected seed sequence: {seed_sequence} with oracle score: {oracle.evaluate(seed_sequence)}")
+            else:
+                seed_sequence = train_df["sequence"].iloc[0]
+            
+            seen_sequences = set(train_df["sequence"])
+
+            result = run_mutation_trajectory(
+                seed_sequence=seed_sequence,
+                sequence_oracle=oracle,
+                surrogate_model=surrogate,
+                walker=walker,
+                token_to_idx=token_to_idx,
+                target_split=test_set,
+                num_rounds=num_rounds,
+                mutants_per_round=mutants_per_round,
+                seen_sequences=seen_sequences,
+                return_stats=return_stats,
+            )
+
+            if return_stats and "stats" in result:
+                s = result["stats"]
+                print(
+                    "Stats:",
+                    f"generated={s['generated']}",
+                    f"in_target={s['in_target_split']}",
+                    f"improvements={s['surrogate_improvements']}",
+                    f"wrong_split={s['skipped_wrong_split']}",
+                    f"seen={s['skipped_seen']}",
+                )
+
+            trajectory_df = result["trajectory"].copy()
+            if not trajectory_df.empty:
+                trajectory_df["run"] = run
+                trajectory_df["evaluated_split"] = test_set
+                all_trajectories.append(trajectory_df)
+            else:
+                print(f"Warning: Trajectory for run {run} on {test_set} is empty and will be skipped in the trajectories DataFrame.")
+            
+    return all_trajectories
