@@ -81,7 +81,6 @@ def load_tfbind8(
 
     return x, y
 
-
 def main() -> None:
     parser = argparse.ArgumentParser(
         description="Download and validate TFBind-8 data without design-bench."
