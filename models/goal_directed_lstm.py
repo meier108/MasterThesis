@@ -12,8 +12,9 @@ class GoalDirectedLSTM(nn.Module):
         self.fc = nn.Linear(hidden_dim, vocab_size)
 
     def forward(self, seq, goal_score, hidden=None):
+        _, current_length = seq.shape
         embeddings = self.embedding(seq)
-        goal_embeddings = goal_score.unsqueeze(1).expand(-1, self.sequence_length, -1)
+        goal_embeddings = goal_score.unsqueeze(1).expand(-1, current_length, -1)
         input = torch.cat((embeddings, goal_embeddings), dim=-1)
         output, hidden = self.lstm(input, hidden)
         logits = self.fc(output)

@@ -170,3 +170,4 @@ def plot_trajectories(
 	ax.set_ylim(min_plot_y - 0.3, max_plot_y + 0.3)
 
 	return ax
+

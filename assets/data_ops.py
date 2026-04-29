@@ -26,10 +26,8 @@ def one_hot_decode_sequence(encoded: np.ndarray, alphabet: List[str]) -> np.ndar
 def load_data(name: str):
     '''Loads the data for the specified dataset name.'''
     if name == "tfbind8":
-        transcription_factor: str = "SIX6_REF_R1",
-        local_data_dir: str = "data/design_bench_data",
-        return tfbind8_data.load_tfbind8(transcription_factor=transcription_factor,
-                                            local_data_dir=local_data_dir)
+        transcription_factor = "SIX6_REF_R1"
+        return tfbind8_data.load_tfbind8(transcription_factor=transcription_factor)
     else:
         raise ValueError(f"Unknown dataset: {name}")
     

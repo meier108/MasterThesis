@@ -73,13 +73,13 @@ def rl_loop_v2(model, scorer, oracle, num_iterations=6, batch_size=128,
         ### Propose new sequences
         new_sequences = []
         for _ in range(batch_size):
-            seq = model.generate(goal_score=1.1, temp=temp)
+            seq = model.generate(goal_score=1.1, temperature=temp)
             new_sequences.append(seq)
 
         new_sequences_np = np.array(new_sequences)
         
         ### Score new sequences by RF
-        scores = np.array([scorer.predict(seq) for seq in new_sequences_np])
+        scores = np.array([scorer.predict(seq.reshape(1, -1)) for seq in new_sequences_np])
 
         ### Lookup oracle for real scores
         real_scores = []
@@ -89,7 +89,7 @@ def rl_loop_v2(model, scorer, oracle, num_iterations=6, batch_size=128,
                 seq_one_hot = tf.one_hot(seq, depth=20).numpy()
                 real_score = oracle.inference(torch.tensor(seq_one_hot.flatten(), dtype=torch.float32)).item()
             else:
-                seq_str = decode_sequence(one_hot_decode_sequence(seq, alphabet=["A", "C", "G", "T"]), alphabet=["A", "C", "G", "T"])
+                seq_str = decode_sequence(seq, alphabet=["A", "C", "G", "T"])
                 real_score = oracle.evaluate(seq_str)
             real_scores.append(real_score)
         real_scores_np = np.array(real_scores)
@@ -98,7 +98,8 @@ def rl_loop_v2(model, scorer, oracle, num_iterations=6, batch_size=128,
         # Edit: use RF scores for selection (real_scores_np -> scores)
         threshold = np.percentile(scores, 80)
         top_mask = scores >= threshold
-        top_sequences = new_sequences_np[top_mask]
+        top_mask = np.asarray(top_mask).astype(bool).ravel()
+        top_sequences = new_sequences_np[top_mask, :]
         top_scores = scores[top_mask]
         top_real_scores = real_scores_np[top_mask]
 
@@ -152,15 +153,21 @@ def run_rl_experiment_lstm_rf():
     token_to_idx = {token: idx for idx, token in enumerate(["A", "C", "G", "T"])}
     X_train = np.array([encode_sequence(seq, token_to_idx) for seq in train_df["sequence"]])
     y_train = train_df["binding_scores"].values
-    X_train_one_hot = np.array([one_hot_encode_sequence(seq, num_tokens=4) for seq in X_train])
-
+    
     # Train RF surrogate
     surrogate = random_forest.RandomForestModel(n_estimators=200, random_state=42)
-    surrogate.fit(X_train_one_hot, y_train)
+    surrogate.fit(X_train, y_train)
 
     # Pretrain LSTM generator
-    lstm_model = goal_directed_lstm.GoalDirectedLSTM(vocab_size=4, embedding_dim=16, sequence_length=len(X_train[0]), hidden_dim=32)
-    train_goal_directed_model_v2(lstm_model, DataLoader(TensorDataset(torch.LongTensor(X_train), torch.FloatTensor(y_train).view(-1, 1)), batch_size=16, shuffle=True), epochs=50)
+    lstm_model = goal_directed_lstm.GoalDirectedLSTM(vocab_size=4, embedding_dim=16, sequence_length=len(X_train[0]), hidden_dim=32, goal_score=1)
+
+    X_train_tensor = torch.LongTensor(X_train)
+    y_train_tensor = torch.FloatTensor(y_train).view(-1, 1)
+
+    train_dataset = TensorDataset(X_train_tensor, y_train_tensor)
+    train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
+
+    train_goal_directed_model_v2(lstm_model, train_loader, epochs=100)
 
     # Create oracle
     oracle_TF_bind = oracle.Oracle_TFBind8(df)
@@ -170,15 +177,15 @@ def run_rl_experiment_lstm_rf():
         model=lstm_model,
         scorer=surrogate,
         oracle=oracle_TF_bind,
-        num_iterations=6,
-        batch_size=128,
+        num_iterations=10,
+        batch_size=265,
         X_train=X_train,
         y_train=y_train,
         GB1=False,
         min_hamming=2,
-        replay_fraction=0.3,
-        temp_start=0.8,
-        temp_end=1.5,
-        entropy_weight=0.01
+        replay_fraction=0.1,
+        temp_start=0.5,
+        temp_end=1.2,
+        entropy_weight=0.1
     )
     return values

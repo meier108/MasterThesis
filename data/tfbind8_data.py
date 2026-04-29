@@ -47,7 +47,7 @@ def download_tfbind8(
         allow_patterns=allow_patterns,
     )
 
-    dataset_dir = Path(local_dir) / prefix
+    dataset_dir = Path(local_dir, str(tfbind8_prefix(transcription_factor)))
     x_path = dataset_dir / "tf_bind_8-x-0.npy"
     y_path = dataset_dir / "tf_bind_8-y-0.npy"
 
@@ -70,8 +70,7 @@ def load_tfbind8(
     - x: integer array with shape [N, 8]
     - y: float array with shape [N, 1]
     """
-
-    dataset_dir = Path(local_dir) / tfbind8_prefix(transcription_factor)
+    dataset_dir = Path(local_dir, str(tfbind8_prefix(transcription_factor)))
     x = np.load(dataset_dir / "tf_bind_8-x-0.npy")
     y = np.load(dataset_dir / "tf_bind_8-y-0.npy")
 
