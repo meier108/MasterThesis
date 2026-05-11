@@ -2,10 +2,8 @@ from typing import Dict, List
 
 import numpy as np
 import pandas as pd
-from scipy.stats import spearmanr
-from sklearn.metrics import mean_squared_error
+import torch
 
-from data import create_split, tfbind8_data
 from models import oracle, random_forest, single_mutant_walker
 from assets.data_ops import load_data, build_tfbind8_dataframe, decode_sequence, encode_sequence, one_hot_encode_sequence
 
@@ -74,12 +72,13 @@ def run_mutation_trajectory(
             if seen_sequences is not None:
                 seen_sequences.add(sequence)
 
-            # Skip sequences not in the target split
-            split_name = sequence_oracle.get_split(sequence)
-            if split_name != target_split:
-                stats["skipped_wrong_split"] += 1
-                continue
-            stats["in_target_split"] += 1
+            if target_split is not None:
+                # Skip sequences not in the target split
+                split_name = sequence_oracle.get_split(sequence)
+                if split_name != target_split:
+                    stats["skipped_wrong_split"] += 1
+                    continue
+                stats["in_target_split"] += 1
             
             # Skip sequences with invalid oracle scores -> should not happen
             oracle_score = sequence_oracle.evaluate(sequence)
@@ -110,27 +109,48 @@ def run_mutation_trajectory(
     return result
 
 def setup_experiment(seed: int, transcription_factor: str, model=None):
+    '''Set up a experiment either with TFBind8 or GB1 dataset, depending on the transcription factor.
+    If transcription_factor is None, it will set up the GB1 experiment.'''
+    
     np.random.seed(seed)
+    token_to_idx = None
 
-    alphabet = ["A", "C", "G", "T"]
-    token_to_idx = {token: idx for idx, token in enumerate(alphabet)}
+    ## Transcription factor -> TFBind8 dataset
+    if transcription_factor is not None:
+        alphabet = ["A", "C", "G", "T"]
+        token_to_idx = {token: idx for idx, token in enumerate(alphabet)}
 
-    x, y = load_data(name="tfbind8")
-    df = build_tfbind8_dataframe(x, y, alphabet)
-    train_df = df[df["split"] == "train"].copy()
-    # Print range of train sequences
-    #print(f"Training sequences: {len(train_df)}")
-    #print(f"Training binding score range: {train_df['binding_scores'].min()} to {train_df['binding_scores'].max()}")
+        x, y = load_data(name="tfbind8")
+        df = build_tfbind8_dataframe(x, y, alphabet)
+        train_df = df[df["split"] == "train"].copy()
+        # Print range of train sequences
+        #print(f"Training sequences: {len(train_df)}")
+        #print(f"Training binding score range: {train_df['binding_scores'].min()} to {train_df['binding_scores'].max()}")
+        oracle_ = oracle.Oracle_TFBind8(df)
+    
+    ## No transcription factor -> GB1 dataset
+    else:
+        alphabet = list("ACDEFGHIKLMNPQRSTVWY")
+        token_to_idx = {token: idx for idx, token in enumerate(alphabet)}
+
+        df = load_data(name="gb1")
+        train_df = df[df["split"] == "train"].copy()
+
+        one_hot_sequence = one_hot_encode_sequence(encode_sequence(train_df['sequence'].iloc[0], token_to_idx), num_tokens=len(token_to_idx))
+        L = one_hot_sequence.shape[0]
+        oracle_ = oracle.Oracle_GB1(L, token_to_idx=token_to_idx, seed=seed)
+
+        # score train sequences with oracle for surrogate training
+        # one hot encode train sequences for oracle
+        train_df["binding_scores"] = oracle_.score_batch(train_df["sequence"])
 
     if model is None:
         model = random_forest.RandomForestModel(n_estimators=200, random_state=seed)
 
     surrogate = fit_surrogate_model(model, train_df, token_to_idx)
 
-    oracle_TF_bind = oracle.Oracle_TFBind8(df)
-
     walker = single_mutant_walker.SingleMutantWalker(alphabet, len(train_df["sequence"].iloc[0]))
-    return train_df, oracle_TF_bind, walker, surrogate, token_to_idx
+    return train_df, oracle_, walker, surrogate, token_to_idx
 
 def run_tfbind8_experiment(
     model=None,
@@ -174,6 +194,44 @@ def run_tfbind8_experiment(
         return_stats=return_stats,
     )
     
+    return trajectory_result
+
+def run_gb1_experiment(
+        seed: int = 42,
+        num_rounds: int = 100,
+        mutants_per_round: int = 10,
+        change_seed_sequence: bool = True,
+        seed_quantile: float = 0.8,
+        return_stats: bool = True,
+        model=None
+):
+    train_df, oracle, walker, surrogate, token_to_idx = setup_experiment(
+        seed=seed,
+        transcription_factor=None,
+        model = model
+    )
+    if change_seed_sequence is True:
+        # Choose a seed only from known training data (lab-realistic assumption).
+        top_percent_threshold = train_df["binding_scores"].quantile(seed_quantile)
+        seed_sequence = train_df[train_df["binding_scores"] >= top_percent_threshold]["sequence"].sample(
+            n=1, random_state=seed
+        ).iloc[0]
+        print(f"Selected seed sequence: {seed_sequence} with oracle score: {oracle.evaluate(seed_sequence)}")
+    else:
+        seed_sequence = train_df["sequence"].iloc[0]
+    seen_sequences = set(train_df["sequence"])
+    trajectory_result = run_mutation_trajectory(
+        seed_sequence=seed_sequence,
+        sequence_oracle=oracle,
+        surrogate_model=surrogate,
+        walker=walker,
+        token_to_idx=token_to_idx,
+        target_split=None,  # No splits in GB1
+        num_rounds=num_rounds,
+        mutants_per_round=mutants_per_round,
+        seen_sequences=seen_sequences,
+        return_stats=return_stats,
+    )
     return trajectory_result
 
 

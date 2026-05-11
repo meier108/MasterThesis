@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
-from data import create_split, tfbind8_data
+from data import create_split, tfbind8_data, gb1_data
+
 from typing import List, Dict
 
 def decode_sequence(encoded: np.ndarray, alphabet: List[str]) -> str:
@@ -28,6 +29,8 @@ def load_data(name: str):
     if name == "tfbind8":
         transcription_factor = "SIX6_REF_R1"
         return tfbind8_data.load_tfbind8(transcription_factor=transcription_factor)
+    if name == "gb1":
+        return gb1_data.load_gb1_dataframe()
     else:
         raise ValueError(f"Unknown dataset: {name}")
     
