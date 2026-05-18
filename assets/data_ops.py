@@ -35,6 +35,9 @@ def load_data(name: str):
         raise ValueError(f"Unknown dataset: {name}")
     
 def build_tfbind8_dataframe(x: np.ndarray, y: np.ndarray, alphabet: List[str]) -> pd.DataFrame:
+    '''Builds a DataFrame for the TFBind8 dataset. 
+    The DataFrame has columns "sequence", "binding_scores", and "split".
+    Calls create_split to assign split labels.'''
     y = np.asarray(y).reshape(-1).astype(np.float32)
     sequences = [decode_sequence(row, alphabet) for row in x]
 
