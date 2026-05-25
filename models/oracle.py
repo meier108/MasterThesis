@@ -50,9 +50,9 @@ class Oracle_GB1(nn.Module):
             torch.nn.Linear(50, 1)
         )
 
-        self.__init_glorot_uniform()
-        for param in self.parameters():
-            param.requires_grad = False
+        #self.__init_glorot_uniform()
+        #for param in self.parameters():
+        #    param.requires_grad = False
 
         self.token_to_idx = token_to_idx
 
@@ -63,6 +63,8 @@ class Oracle_GB1(nn.Module):
                 torch.nn.init.zeros_(m.bias)
 
     def forward(self, x):
+        #output needs to be between 0 and 1, so we apply a sigmoid at the end
+        #return torch.sigmoid(self.net(x))
         return self.net(x)
     
     def evaluate(self, sequence: str):
@@ -84,3 +86,16 @@ class Oracle_GB1(nn.Module):
         X = torch.tensor(X, dtype=torch.float32)
         with torch.no_grad():
             return self.forward(X).numpy()
+        
+    def train_epoch(self, train_loader, optimizer, criterion):
+        '''Train the oracle for one epoch. Not used in our experiments, but can be used to create a stronger oracle.'''
+        self.train()
+        total_loss = 0
+        for X_batch, y_batch in train_loader:
+            optimizer.zero_grad()
+            outputs = self.forward(X_batch)
+            loss = criterion(outputs.squeeze(), y_batch)
+            loss.backward()
+            optimizer.step()
+            total_loss += loss.item()
+        return total_loss / len(train_loader)

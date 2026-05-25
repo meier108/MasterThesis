@@ -11,6 +11,7 @@ class SingleMutantWalker:
         self.sequence_length = sequence_length
 
     def mutate_sequence(self, sequence):
+        '''sequence: str, the input sequence to mutate.'''
         sequence = str(sequence).strip().upper()
         if len(sequence) != self.sequence_length:
             raise ValueError(
