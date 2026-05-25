@@ -1,11 +1,13 @@
 import joblib
 import os
+import numpy as np
 import pandas as pd
 import torch
 import torch.nn as nn
-from assets.data_ops import encode_sequence, one_hot_encode_sequence
-import numpy as np
-
+import sys
+import os
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from assets.data_ops import one_hot_encode_sequence, encode_sequence
 
 class Oracle_TFBind8:
     def __init__(self, data: pd.DataFrame):
