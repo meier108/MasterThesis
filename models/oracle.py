@@ -50,9 +50,9 @@ class Oracle_GB1(nn.Module):
             torch.nn.Linear(50, 1)
         )
 
-        #self.__init_glorot_uniform()
-        #for param in self.parameters():
-        #    param.requires_grad = False
+        self.__init_glorot_uniform()
+        for param in self.parameters():
+            param.requires_grad = False
 
         self.token_to_idx = token_to_idx
 
@@ -68,14 +68,15 @@ class Oracle_GB1(nn.Module):
         return self.net(x)
     
     def evaluate(self, sequence: str):
-        '''Compatibility wrapper used by the optimization loop.'''
+        '''Compatibility wrapper used by the optimization loop. Returns a Python float.'''
         x = one_hot_encode_sequence(encode_sequence(sequence, self.token_to_idx), num_tokens=len(self.token_to_idx))
         x = torch.tensor(x, dtype=torch.float32).unsqueeze(0)  # Add batch dimension
         with torch.no_grad():
-            return self.forward(x)
+            result = self.forward(x)
+            return float(result.item())  # Convert tensor to Python float
         
     def score_batch(self, sequences) -> np.ndarray:
-        '''Score a list or pandas Series of sequences. Used for bulk scoring.'''
+        '''Score a list or pandas Series of sequences. Used for bulk scoring. Returns numpy array of floats.'''
         X = np.stack([
             one_hot_encode_sequence(
                 encode_sequence(seq, self.token_to_idx),
@@ -85,7 +86,14 @@ class Oracle_GB1(nn.Module):
         ])
         X = torch.tensor(X, dtype=torch.float32)
         with torch.no_grad():
-            return self.forward(X).numpy()
+            return self.forward(X).cpu().numpy().astype(np.float32).flatten()
+    
+    def inference(self, x: torch.Tensor):
+        '''Direct inference on a tensor. Used for RL experiments. Returns tensor (can call .item() on result).'''
+        if not isinstance(x, torch.Tensor):
+            x = torch.tensor(x, dtype=torch.float32)
+        with torch.no_grad():
+            return self.forward(x).squeeze()
         
     def train_epoch(self, train_loader, optimizer, criterion):
         '''Train the oracle for one epoch. Not used in our experiments, but can be used to create a stronger oracle.'''
