@@ -244,11 +244,27 @@ class RLExperiment(BaseExperiment):
                 min_hamming=self.rl_config.min_hamming
             )
         
-        print(f'  Generated: {len(new_sequences_np)}, '
-              f'Top 20%: {len(top_sequences)}, '
-              f'Avg oracle: {np.mean(oracle_scores):.4f}, '
-              f'Top avg oracle: {np.mean(top_oracle_scores):.4f}')
+        # TODO: Filter out sequences already seen in previous iterations
+        '''
+        new_mask = []
+        for i, seq_encoded in enumerate(top_sequences):
+            seq_str = decode_sequence(seq_encoded, alphabet=list(self.token_to_idx.keys()))
+            if seq_str not in self.seen_sequences:
+                new_mask.append(i)
+                self.seen_sequences.add(seq_str)
         
+        if new_mask:
+            new_mask = np.array(new_mask)
+            top_sequences = top_sequences[new_mask]
+            top_surrogate_scores = top_surrogate_scores[new_mask]
+            top_oracle_scores = top_oracle_scores[new_mask]
+        else:
+            # If all sequences were already seen, keep the best one
+            top_sequences = top_sequences[:1] if len(top_sequences) > 0 else np.array([])
+            top_surrogate_scores = top_surrogate_scores[:1] if len(top_surrogate_scores) > 0 else np.array([])
+            top_oracle_scores = top_oracle_scores[:1] if len(top_oracle_scores) > 0 else np.array([])
+        '''
+
         # Create trajectory records
         for seq_encoded, surrogate_score, oracle_score in zip(
             top_sequences, top_surrogate_scores, top_oracle_scores

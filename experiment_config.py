@@ -90,7 +90,7 @@ EXPERIMENT_CONFIGS: Dict[str, ExperimentConfig] = {
         dataset="tfbind8",
         rl_config=RLConfig(
             transcription_factor="SIX6_REF_R1",
-            num_iterations=20,
+            num_iterations=10,
             batch_size=265,
         ),
     ),
@@ -99,7 +99,7 @@ EXPERIMENT_CONFIGS: Dict[str, ExperimentConfig] = {
         dataset="gb1",
         rl_config=RLConfig(
             transcription_factor=None,
-            num_iterations=20,
+            num_iterations=10,
             batch_size=128,  # Smaller for GB1
         ),
     ),
