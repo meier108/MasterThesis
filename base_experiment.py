@@ -82,10 +82,12 @@ class BaseExperiment(ABC):
         self.setup()
         
         all_records = []
+
+        iterations = (self.config.smw_config.num_iterations if self.config.method == 'smw' 
+              else self.config.rl_config.num_iterations if self.config.method == 'rl' 
+              else self.config.gfn_config.num_iterations)
         
-        for iteration in range(self.config.smw_config.num_iterations 
-                              if self.config.method == "smw"
-                              else self.config.rl_config.num_iterations):
+        for iteration in range(iterations):
             records = self.run_single_iteration(iteration)
             all_records.extend(records)
         

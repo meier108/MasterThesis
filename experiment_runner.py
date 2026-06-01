@@ -10,6 +10,7 @@ import time
 from experiment_config import get_config
 from smw_experiment import SMWExperiment
 from rl_experiment import RLExperiment
+from gfn_experiment import GFlowNetExperiment
 from trajectory import TrajectoryRecord
 
 
@@ -18,7 +19,7 @@ def run_single_experiment(method: str, config, run_id: int) -> List[TrajectoryRe
     Run a single experiment instance.
     
     Args:
-        method: "smw" or "rl"
+        method: "smw" or "rl" or "gfn"
         config: ExperimentConfig
         run_id: which run (1-10)
     
@@ -29,6 +30,8 @@ def run_single_experiment(method: str, config, run_id: int) -> List[TrajectoryRe
         experiment = SMWExperiment(config, run_id)
     elif method == "rl":
         experiment = RLExperiment(config, run_id)
+    elif method == "gfn":
+        experiment = GFlowNetExperiment(config, run_id)
     else:
         raise ValueError(f"Unknown method: {method}")
     
@@ -74,7 +77,10 @@ class ExperimentRunner:
         print(f"Method: {self.config.method}")
         print(f"Dataset: {self.config.dataset}")
         print(f"Runs: {self.config.num_runs}")
-        print(f"Iterations per run: {self.config.smw_config.num_iterations if self.config.method == 'smw' else self.config.rl_config.num_iterations}")
+        iterations = (self.config.smw_config.num_iterations if self.config.method == 'smw' 
+              else self.config.rl_config.num_iterations if self.config.method == 'rl' 
+              else self.config.gfn_config.num_iterations)
+        print(f"Iterations per run: {iterations}")
         print(f"Parallel: {parallel}")
         print(f"{'#'*60}\n")
         

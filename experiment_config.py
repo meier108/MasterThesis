@@ -31,6 +31,27 @@ class RLConfig:
     lstm_epochs: int = 100
     lr: float = 0.001
 
+@dataclass
+class GFlowNetConfig:
+
+    transcription_factor: Optional[str] = "SIX6_REF_R1"  # None for GB1
+    num_iterations: int = 5
+    batch_size: int = 64
+
+    hidden_dim: int = 2048
+    gfn_lr: float = 1e-5
+    log_z_lr: float = 1e-3
+    gfn_train_steps: int = 2000 #set down from 5000 for testing
+    minibatch_size: int = 32
+    delta: float = 0.001
+    beta: float = 3.0
+    gamma: float = 0.5
+    top_k_ratio: float = 0.8
+
+    n_proxy_members: int = 5
+    proxy_lr: float = 1e-4
+    proxy_epochs: int = 20 # set down from 50 for testing
+    kappa: float = 0.1
 
 @dataclass
 class ExperimentConfig:
@@ -39,11 +60,12 @@ class ExperimentConfig:
     method: str  # "smw" or "rl"
     dataset: str  # "tfbind8" or "gb1"
     seed: int = 42
-    num_runs: int = 10
+    num_runs: int = 1
     
     # Method-specific configs
     smw_config: Optional[SMWConfig] = None
     rl_config: Optional[RLConfig] = None
+    gfn_config: Optional[GFlowNetConfig] = None
     
     def __post_init__(self):
         """Initialize method-specific configs if not provided."""
@@ -51,7 +73,8 @@ class ExperimentConfig:
             self.smw_config = SMWConfig()
         if self.rl_config is None:
             self.rl_config = RLConfig()
-
+        if self.gfn_config is None:
+            self.gfn_config = GFlowNetConfig()
 
 # Predefined experiment keywords
 EXPERIMENT_CONFIGS: Dict[str, ExperimentConfig] = {
@@ -103,6 +126,15 @@ EXPERIMENT_CONFIGS: Dict[str, ExperimentConfig] = {
             batch_size=128,  # Smaller for GB1
         ),
     ),
+    "gfn_tfbind8": ExperimentConfig(
+        method='gfn',
+        dataset='tfbind8',
+        gfn_config = GFlowNetConfig(
+            transcription_factor='SIX6_REF_R1',
+            num_iterations=5,
+            batch_size=64,
+        ),
+    )
 }
 
 
