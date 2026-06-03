@@ -137,6 +137,13 @@ class Oracle_GB1(nn.Module):
             total_loss += loss.item()
         return total_loss / len(train_loader)
     
+    def load_from_checkpoint(self, checkpoint_path):
+        '''Load model weights from a saved checkpoint.'''
+        if not os.path.exists(checkpoint_path):
+            raise FileNotFoundError(f"No checkpoint found at: {checkpoint_path}")
+        state_dict = torch.load(checkpoint_path)
+        self.load_state_dict(state_dict)
+    
 #####Code for training the GB1 oracle#####
 import torch
 from torch.utils.data import DataLoader, TensorDataset

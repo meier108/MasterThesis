@@ -9,7 +9,7 @@ from __future__ import annotations
 from tqdm.auto import tqdm
 import time
 
-import create_split
+
 
 import sys
 import os
@@ -24,6 +24,7 @@ import numpy as np
 
 from numba import njit, prange
 from models.single_mutant_walker import SingleMutantWalker
+import data.create_split as create_split
 
 
 
