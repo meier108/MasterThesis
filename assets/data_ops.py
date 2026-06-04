@@ -1,6 +1,13 @@
+import sys
+import os
+sys.path.insert(0, '/Users/meier/Documents/MasterThesis')
+os.chdir('/Users/meier/Documents/MasterThesis')
+
 import numpy as np
 import pandas as pd
-from data import create_split, tfbind8_data, gb1_data
+import data.create_split as create_split
+import data.tfbind8_data as tfbind8_data
+import data.gb1_data as gb1_data
 
 from typing import List, Dict
 
