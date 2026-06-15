@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 
 
@@ -170,4 +171,388 @@ def plot_trajectories(
 	ax.set_ylim(min_plot_y - 0.3, max_plot_y + 0.3)
 
 	return ax
+
+
+def plot_metrics_vs_hamming_distance(
+	df,
+	target_col='oracle_score',
+	rf_pred_col='rf_prediction',
+	mlp_pred_col='mlp_prediction',
+	hamming_col='min_hamming_distance',
+	ax=None,
+):
+	"""Plot mean absolute error vs minimum Hamming distance for RF and MLP models.
+	
+	Args:
+		df: DataFrame containing oracle scores, model predictions, and min hamming distance
+		target_col: Column name for oracle/true scores (default: 'oracle_score')
+		rf_pred_col: Column name for RF predictions (default: 'rf_prediction')
+		mlp_pred_col: Column name for MLP predictions (default: 'mlp_prediction')
+		hamming_col: Column name for minimum hamming distance (default: 'min_hamming_distance')
+		ax: Optional matplotlib axis
+	
+	Returns:
+		The matplotlib axis object
+	"""
+	
+	# Calculate absolute errors
+	df_temp = df.copy()
+	df_temp['error_rf'] = np.abs(df_temp[target_col] - df_temp[rf_pred_col])
+	df_temp['error_mlp'] = np.abs(df_temp[target_col] - df_temp[mlp_pred_col])
+	
+	# Group by hamming distance and calculate mean and std
+	grouped = df_temp.groupby(hamming_col).agg(
+		mean_error_rf=('error_rf', 'mean'),
+		std_error_rf=('error_rf', 'std'),
+		mean_error_mlp=('error_mlp', 'mean'),
+		std_error_mlp=('error_mlp', 'std'),
+	).reset_index()
+	
+	x = grouped[hamming_col]
+	
+	if ax is None:
+		_, ax = plt.subplots(figsize=(12, 6))
+	
+	# Plot RF metrics with error band
+	ax.plot(x, grouped['mean_error_rf'], label='RF vs Oracle', color='tab:blue', linewidth=2)
+	ax.fill_between(
+		x,
+		grouped['mean_error_rf'] - grouped['std_error_rf'],
+		grouped['mean_error_rf'] + grouped['std_error_rf'],
+		color='tab:blue',
+		alpha=0.2
+	)
+	
+	# Plot MLP metrics with error band
+	ax.plot(x, grouped['mean_error_mlp'], label='MLP vs Oracle', color='tab:orange', linewidth=2)
+	ax.fill_between(
+		x,
+		grouped['mean_error_mlp'] - grouped['std_error_mlp'],
+		grouped['mean_error_mlp'] + grouped['std_error_mlp'],
+		color='tab:orange',
+		alpha=0.2
+	)
+	
+	ax.set_title('Mean Absolute Error vs Min Hamming Distance')
+	ax.set_xlabel('Min Hamming Distance to Training Set')
+	ax.set_ylabel('Mean Absolute Error')
+	ax.legend()
+	ax.grid(alpha=0.3)
+	
+	return ax
+
+def plot_trajectory_quality_vs_distance(
+	df,
+	oracle_col='oracle_score',
+	hamming_col='min_hamming_distance',
+	plot_type='scatter',
+	ax=None,
+):
+	"""Plot sequence quality vs minimum Hamming distance to assess strategy effectiveness.
+	
+	Shows whether your strategy still finds high-quality sequences as you move further from training set.
+	
+	Args:
+		df: Trajectory DataFrame with oracle scores and hamming distances
+		oracle_col: Column name for oracle scores (default: 'oracle_score')
+		hamming_col: Column name for minimum hamming distance (default: 'min_hamming_distance')
+		plot_type: 'scatter' (default) for individual points with mean line,
+				   'box' for boxplots by distance, 'both' for combined view
+		ax: Optional matplotlib axis
+	
+	Returns:
+		The matplotlib axis object
+	"""
+	
+	if ax is None:
+		_, ax = plt.subplots(figsize=(12, 6))
+	
+	if plot_type in ['scatter', 'both']:
+		# Scatter plot with transparency to see density
+		ax.scatter(df[hamming_col], df[oracle_col], alpha=0.5, s=50, color='tab:blue', label='Individual sequences')
+		
+		# Add mean line
+		grouped_mean = df.groupby(hamming_col)[oracle_col].mean().sort_index()
+		ax.plot(grouped_mean.index, grouped_mean.values, color='tab:red', linewidth=2.5, marker='o', label='Mean quality', zorder=5)
+	
+	if plot_type in ['box', 'both']:
+		# Create boxplot by grouping hamming distances
+		hamming_distances = sorted(df[hamming_col].unique())
+		data_by_distance = [df[df[hamming_col] == d][oracle_col].values for d in hamming_distances]
+		
+		if plot_type == 'box':
+			# If only box plot, create from scratch
+			ax.boxplot(data_by_distance, labels=hamming_distances, patch_artist=True)
+			for patch in ax.artists:
+				patch.set_facecolor('tab:blue')
+				patch.set_alpha(0.7)
+		else:
+			# Add boxplot overlay on scatter
+			bp = ax.boxplot(data_by_distance, positions=hamming_distances, widths=0.3, 
+						   patch_artist=True, showfliers=False)
+			for patch in bp['boxes']:
+				patch.set_facecolor('tab:orange')
+				patch.set_alpha(0.3)
+	
+	ax.set_xlabel('Min Hamming Distance to Training Set')
+	ax.set_ylabel('Oracle Score (Sequence Quality)')
+	ax.set_title('Strategy Effectiveness: Sequence Quality vs Distance from Training Set')
+	ax.grid(alpha=0.3, axis='y')
+	ax.legend()
+	
+	return ax
+
+
+def plot_strategy_comparison_topk(
+	dataframes_dict,
+	oracle_col='oracle_score',
+	k_values=[1, 5, 10, 25, 50],
+	ax=None,
+):
+	"""Compare top-k sequence quality across different optimization strategies.
+	
+	Shows how different strategies compare in finding high-quality sequences.
+	For each k value, computes mean of top-k sequences for each strategy.
+	
+	Args:
+		dataframes_dict: Dict with strategy names as keys and DataFrames as values
+						 (e.g., {'SMW': df_smw, 'RL': df_rl, 'GFlow': df_gflow})
+		oracle_col: Column name for oracle scores (default: 'oracle_score')
+		k_values: List of k values to evaluate (default: [1, 5, 10, 25, 50])
+		ax: Optional matplotlib axis
+	
+	Returns:
+		The matplotlib axis object
+
+	TODO Usage: 
+	from assets.plot import plot_strategy_comparison_topk
+	import pandas as pd
+
+	# Load trajectory data from each strategy
+	df_smw = pd.read_csv('results/trajectory_smw_tfbind8.csv')
+	df_rl = pd.read_csv('results/trajectory_rl_tfbind8.csv')
+	df_gfn = pd.read_csv('results/trajectory_gfn_tfbind8.csv')
+
+	# Compare strategies
+	plot_strategy_comparison_topk({
+		'SMW (Naive)': df_smw,
+		'RL': df_rl,
+		'GFlow Net': df_gfn
+	})
+
+	plt.show()
+	"""
+	
+	if ax is None:
+		_, ax = plt.subplots(figsize=(12, 6))
+	
+	# Compute top-k mean scores for each strategy
+	results = {}
+	for strategy_name, df in dataframes_dict.items():
+		topk_means = []
+		for k in k_values:
+			top_k_scores = df.nlargest(k, oracle_col)[oracle_col]
+			topk_means.append(top_k_scores.mean())
+		results[strategy_name] = topk_means
+	
+	# Plot each strategy
+	for strategy_name, means in results.items():
+		ax.plot(k_values, means, marker='o', linewidth=2.5, markersize=8, label=strategy_name)
+	
+	ax.set_xlabel('Top-k Sequences', fontsize=12)
+	ax.set_ylabel('Mean Oracle Score', fontsize=12)
+	ax.set_title('Strategy Effectiveness: Top-k Sequence Quality Comparison', fontsize=13)
+	ax.set_xticks(k_values)
+	ax.grid(alpha=0.3)
+	ax.legend(fontsize=11)
+	
+	return ax
+
+
+def plot_surrogate_reliability_vs_distance(
+	df,
+	oracle_col='oracle_score',
+	surrogate_col='surrogate_score',
+	hamming_col='min_hamming_distance',
+	metric='error',
+	ax=None,
+):
+	"""Plot surrogate model reliability degradation as function of OOD distance.
+	
+	Shows whether surrogate models become less reliable (higher error/lower correlation)
+	as sequences move further from the training set.
+	
+	Args:
+		df: DataFrame with oracle scores, surrogate scores, and hamming distances
+		oracle_col: Column name for oracle scores (default: 'oracle_score')
+		surrogate_col: Column name for surrogate scores (default: 'surrogate_score')
+		hamming_col: Column name for minimum hamming distance (default: 'min_hamming_distance')
+		metric: 'error' for absolute error (default), 'mse' for squared error, 'correlation' for Spearman
+		ax: Optional matplotlib axis
+	
+	Returns:
+		The matplotlib axis object
+	"""
+	from scipy.stats import spearmanr
+	
+	if ax is None:
+		_, ax = plt.subplots(figsize=(12, 6))
+	
+	# Calculate metric by hamming distance
+	grouped_data = []
+	hamming_distances = sorted(df[hamming_col].unique())
+	
+	for dist in hamming_distances:
+		subset = df[df[hamming_col] == dist]
+		
+		if metric == 'error':
+			errors = np.abs(subset[oracle_col] - subset[surrogate_col])
+			metric_mean = errors.mean()
+			metric_std = errors.std()
+		elif metric == 'mse':
+			errors = (subset[oracle_col] - subset[surrogate_col]) ** 2
+			metric_mean = errors.mean()
+			metric_std = errors.std()
+		elif metric == 'correlation':
+			if len(subset) > 1:
+				corr = spearmanr(subset[oracle_col], subset[surrogate_col]).correlation
+				metric_mean = corr
+				metric_std = 0
+			else:
+				metric_mean = np.nan
+				metric_std = 0
+		
+		grouped_data.append({'dist': dist, 'mean': metric_mean, 'std': metric_std})
+	
+	grouped_df = pd.DataFrame(grouped_data)
+	
+	# Plot with error bands
+	ax.plot(grouped_df['dist'], grouped_df['mean'], 
+			marker='o', linewidth=2.5, markersize=8, color='tab:red', label=f'{metric.title()} Mean')
+	ax.fill_between(grouped_df['dist'], 
+					grouped_df['mean'] - grouped_df['std'],
+					grouped_df['mean'] + grouped_df['std'],
+					color='tab:red', alpha=0.2, label='±1 Std Dev')
+	
+	# Add scatter points to show individual sample density
+	ax.scatter(df[hamming_col], 
+			  np.abs(df[oracle_col] - df[surrogate_col]) if metric == 'error' else 
+			  (df[oracle_col] - df[surrogate_col]) ** 2 if metric == 'mse' else
+			  df[oracle_col],
+			  alpha=0.2, s=30, color='gray', label='Individual samples')
+	
+	ax.set_xlabel('Min Hamming Distance to Training Set', fontsize=12)
+	if metric == 'error':
+		ax.set_ylabel('Mean Absolute Error (Oracle vs Surrogate)', fontsize=12)
+		ax.set_title('Surrogate Model Reliability: Prediction Error vs OOD Distance', fontsize=13)
+	elif metric == 'mse':
+		ax.set_ylabel('Mean Squared Error', fontsize=12)
+		ax.set_title('Surrogate Model Reliability: MSE vs OOD Distance', fontsize=13)
+	else:
+		ax.set_ylabel('Spearman Correlation', fontsize=12)
+		ax.set_title('Surrogate Model Reliability: Correlation vs OOD Distance', fontsize=13)
+	
+	ax.grid(alpha=0.3)
+	ax.legend(fontsize=10)
+	
+	return ax
+
+
+def plot_trajectory_optimization_progress(
+	df,
+	iteration_col='iteration',
+	oracle_col='oracle_score',
+	surrogate_col='surrogate_score',
+	sequence_col='sequence',
+	run_id_col='run_id',
+	run_id=1,
+	figsize=(15, 6),
+	ax=None,
+):
+	"""Plot optimization progress with best sequences and mean scores by iteration.
+	
+	Creates a two-panel visualization:
+	- Left: Scatter of oracle scores per iteration, colored by surrogate score, with best sequences annotated
+	- Right: Mean oracle and surrogate scores over iterations with error bands
+	
+	Args:
+		df: Trajectory DataFrame
+		iteration_col: Column name for iteration (default: 'iteration')
+		oracle_col: Column name for oracle scores (default: 'oracle_score')
+		surrogate_col: Column name for surrogate scores (default: 'surrogate_score')
+		sequence_col: Column name for sequences (default: 'sequence')
+		run_id_col: Column name for run IDs (default: 'run_id')
+		run_id: Specific run to plot (default: 1)
+		figsize: Figure size (default: (15, 6))
+		ax: Optional matplotlib axis (ignored, creates subplots)
+	
+	Returns:
+		Tuple of (fig, axes)
+	"""
+	
+	# Filter for specific run
+	plot_df = df.where(df[run_id_col] == run_id).dropna(subset=[run_id_col]).copy()
+	plot_df = plot_df.sort_values([iteration_col, oracle_col], ascending=[True, False]).reset_index(drop=True)
+	
+	# Get best sequence per iteration
+	best_per_iteration = plot_df.loc[plot_df.groupby(iteration_col)[oracle_col].idxmax()].copy()
+	
+	fig, axes = plt.subplots(1, 2, figsize=figsize, gridspec_kw={'width_ratios': [1.4, 1]})
+	
+	# Left panel: Scatter plot with best sequences annotated
+	scatter = axes[0].scatter(
+		plot_df[iteration_col],
+		plot_df[oracle_col],
+		c=plot_df[surrogate_col],
+		cmap='viridis',
+		s=70,
+		alpha=0.85,
+		edgecolors='black',
+		linewidths=0.5,
+	)
+	
+	# Annotate best sequences
+	for _, row in best_per_iteration.iterrows():
+		axes[0].annotate(
+			row[sequence_col],
+			(row[iteration_col], row[oracle_col]),
+			textcoords="offset points",
+			xytext=(6, 8),
+			fontsize=8,
+		)
+	
+	axes[0].set_xlabel('Iteration', fontsize=12)
+	axes[0].set_ylabel('Oracle Score', fontsize=12)
+	axes[0].set_xticks(sorted(plot_df[iteration_col].unique()))
+	axes[0].grid(True, alpha=0.3)
+	cbar = plt.colorbar(scatter, ax=axes[0])
+	cbar.set_label('Surrogate Score', fontsize=12)
+	cbar.ax.tick_params(labelsize=10)
+	
+	# Right panel: Mean scores per iteration with error bands
+	mean_scores = plot_df.groupby(iteration_col)[[oracle_col, surrogate_col]].mean().reset_index()
+	std_scores = plot_df.groupby(iteration_col)[[oracle_col, surrogate_col]].std().reset_index()
+	
+	axes[1].plot(mean_scores[iteration_col], mean_scores[oracle_col], label='Oracle Score', linewidth=2)
+	axes[1].plot(mean_scores[iteration_col], mean_scores[surrogate_col], label='Surrogate Score', linewidth=2)
+	axes[1].fill_between(
+		mean_scores[iteration_col],
+		mean_scores[oracle_col] - std_scores[oracle_col],
+		mean_scores[oracle_col] + std_scores[oracle_col],
+		alpha=0.2,
+	)
+	axes[1].fill_between(
+		mean_scores[iteration_col],
+		mean_scores[surrogate_col] - std_scores[surrogate_col],
+		mean_scores[surrogate_col] + std_scores[surrogate_col],
+		alpha=0.2,
+	)
+	axes[1].set_xlabel('Iteration', fontsize=12)
+	axes[1].set_ylabel('Mean Score', fontsize=12)
+	axes[1].legend()
+	axes[1].grid(True, alpha=0.3)
+	
+	plt.tight_layout()
+	
+	return fig, axes
 

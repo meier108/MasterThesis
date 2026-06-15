@@ -64,14 +64,6 @@ class Oracle_GB1(nn.Module):
             torch.nn.ReLU(),
             torch.nn.Linear(50, 1)
         )
-<<<<<<< HEAD
-
-        self.__init_glorot_uniform()
-        for param in self.parameters():
-            param.requires_grad = False
-
-=======
->>>>>>> trainedOracle
         self.token_to_idx = token_to_idx
 
     def forward(self, x):
@@ -87,9 +79,6 @@ class Oracle_GB1(nn.Module):
         return self.net(x)
     
     def evaluate(self, sequence: str):
-<<<<<<< HEAD
-        '''Compatibility wrapper used by the optimization loop. Returns a Python float.'''
-=======
         '''
         Score one sequence string.
 
@@ -99,7 +88,6 @@ class Oracle_GB1(nn.Module):
         Output:
         - torch.Tensor: predicted score shaped (1, 1).
         '''
->>>>>>> trainedOracle
         x = one_hot_encode_sequence(encode_sequence(sequence, self.token_to_idx), num_tokens=len(self.token_to_idx))
         x = torch.tensor(x, dtype=torch.float32).unsqueeze(0)  # Add batch dimension
         with torch.no_grad():
@@ -107,9 +95,6 @@ class Oracle_GB1(nn.Module):
             return float(result.item())  # Convert tensor to Python float
         
     def score_batch(self, sequences) -> np.ndarray:
-<<<<<<< HEAD
-        '''Score a list or pandas Series of sequences. Used for bulk scoring. Returns numpy array of floats.'''
-=======
         '''
         Score multiple sequences at once.
 
@@ -119,7 +104,6 @@ class Oracle_GB1(nn.Module):
         Output:
         - np.ndarray: predictions shaped (n_sequences, 1).
         '''
->>>>>>> trainedOracle
         X = np.stack([
             one_hot_encode_sequence(
                 encode_sequence(seq, self.token_to_idx),

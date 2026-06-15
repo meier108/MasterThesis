@@ -2,6 +2,8 @@
 
 import pandas as pd
 import numpy as np
+from scipy.stats import spearmanr
+from sklearn.metrics import mean_squared_error
 
 from numba import prange, njit
 
@@ -68,3 +70,49 @@ def assign_labels(min_dists):
     named_labels = np.array(labels)[indices - 1]
     print(f"Label distribution: {pd.Series(named_labels).value_counts()}")
     return named_labels
+
+
+def compute_model_metrics(df, target_col='oracle_score', rf_pred_col='rf_prediction', mlp_pred_col='mlp_prediction'):
+    '''Compute and display metrics for Random Forest and MLP models.
+    
+    Calculates Spearman correlation, MSE, bias, and variance for both models.
+    
+    Input:
+        df: DataFrame containing the oracle scores and model predictions
+        target_col: Column name for the oracle/true scores (default: 'oracle_score')
+        rf_pred_col: Column name for RF predictions (default: 'rf_prediction')
+        mlp_pred_col: Column name for MLP predictions (default: 'mlp_prediction')
+    
+    Output:
+        Prints a formatted table with metrics for both models
+    '''
+    
+    # Random Forest metrics
+    spearmanr_rf = spearmanr(df[target_col], df[rf_pred_col])
+    mse_rf = mean_squared_error(df[target_col], df[rf_pred_col])
+    bias_rf = (df[target_col] - df[rf_pred_col]).mean()
+    variance_rf = ((df[rf_pred_col] - df[rf_pred_col].mean()) ** 2).mean()
+    
+    # MLP metrics
+    spearmanr_mlp = spearmanr(df[target_col], df[mlp_pred_col])
+    mse_mlp = mean_squared_error(df[target_col], df[mlp_pred_col])
+    bias_mlp = (df[target_col] - df[mlp_pred_col]).mean()
+    variance_mlp = ((df[mlp_pred_col] - df[mlp_pred_col].mean()) ** 2).mean()
+    
+    # Create results dataframe for nice table display
+    results = pd.DataFrame({
+        'Model': ['Random Forest', 'MLP'],
+        'Spearman ρ': [spearmanr_rf.correlation, spearmanr_mlp.correlation],
+        'MSE': [mse_rf, mse_mlp],
+        'Bias': [bias_rf, bias_mlp],
+        'Variance': [variance_rf, variance_mlp]
+    })
+    
+    # Format and print the table
+    print("\n" + "="*80)
+    print("MODEL PERFORMANCE METRICS")
+    print("="*80)
+    for col in ['Spearman ρ', 'MSE', 'Bias', 'Variance']:
+        results[col] = results[col].apply(lambda x: f'{x:.4f}')
+    print(results.to_string(index=False))
+    print("="*80 + "\n")

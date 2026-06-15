@@ -9,7 +9,7 @@ class SMWConfig:
     """Configuration for Single Mutant Walker experiment."""
     
     transcription_factor: Optional[str] = "SIX6_REF_R1"  # None for GB1
-    target_split: Optional[str] = "test_c"  # None for GB1
+    target_split: Optional[str] = None  # None for GB1, also removed target splits from TFBind8 for better comparison
     num_iterations: int = 20  # Changed from 100 to 20
     mutants_per_round: int = 10
     change_seed_sequence: bool = True
@@ -22,14 +22,14 @@ class RLConfig:
     
     transcription_factor: Optional[str] = "SIX6_REF_R1"  # None for GB1
     num_iterations: int = 20  # Changed from 6 to 20
-    batch_size: int = 265  # for LSTM generation
+    batch_size: int = 128  # for LSTM generation
     min_hamming: int = 2
-    replay_fraction: float = 0.1
+    replay_fraction: float = 0.2
     temp_start: float = 0.5
-    temp_end: float = 1.2
-    entropy_weight: float = 0.1
-    lstm_epochs: int = 100
-    lr: float = 0.001
+    temp_end: float = 1.0
+    entropy_weight: float = 0.01
+    lstm_epochs: int = 50
+    lr: float = 1e-3
 
 @dataclass
 class GFlowNetConfig:
@@ -60,7 +60,7 @@ class ExperimentConfig:
     method: str  # "smw" or "rl"
     dataset: str  # "tfbind8" or "gb1"
     seed: int = 42
-    num_runs: int = 1
+    num_runs: int = 10
     
     # Method-specific configs
     smw_config: Optional[SMWConfig] = None
@@ -87,16 +87,6 @@ EXPERIMENT_CONFIGS: Dict[str, ExperimentConfig] = {
             num_iterations=20,
             mutants_per_round=10,
         ),
-    ),
-    "mlp_tfbind8" : ExperimentConfig(
-        method='mlp',
-        dataset = 'tfbind8',
-        smw_config=SMWConfig(
-            transcription_factor='SIX6_REF_R1',
-            target_split=None,
-            num_iterations=20,
-            mutants_per_round=10,
-        )
     ),
     "smw_gb1": ExperimentConfig(
         method="smw",

@@ -8,7 +8,7 @@ from torch.utils.data import TensorDataset, DataLoader
 from base_experiment import BaseExperiment
 from trajectory import TrajectoryRecord
 from experiment_config import ExperimentConfig
-from models import oracle, random_forest, goal_directed_lstm
+from models import oracle, random_forest, goal_directed_lstm, mlp
 from assets.data_ops import (
     load_data, build_tfbind8_dataframe, encode_sequence, 
     one_hot_encode_sequence, decode_sequence
@@ -16,7 +16,7 @@ from assets.data_ops import (
 
 
 class RLExperiment(BaseExperiment):
-    """Reinforcement Learning with LSTM generator and RF surrogate."""
+    """Reinforcement Learning with LSTM generator and MLP surrogate."""
     
     def __init__(self, config: ExperimentConfig, run_id: int):
         super().__init__(config, run_id)
@@ -29,9 +29,10 @@ class RLExperiment(BaseExperiment):
         
         # For diversity filtering during iterations
         self.all_generated_sequences = []
+        self.max_score = 1.0
         
     def setup(self):
-        """Initialize oracle, surrogate (RF), pretrain LSTM."""
+        """Initialize oracle, surrogate (MLP), pretrain LSTM."""
         np.random.seed(self.seed)
         torch.manual_seed(self.seed)
         
@@ -42,11 +43,8 @@ class RLExperiment(BaseExperiment):
         else:
             raise ValueError(f"Unknown dataset: {self.config.dataset}")
         
-        # Train RF surrogate
-        self.surrogate = random_forest.RandomForestModel(
-            n_estimators=200, 
-            random_state=self.seed
-        )
+        # Train MLP surrogate
+        self.surrogate = mlp.MLPModel()
         X_train_one_hot = np.stack([
             one_hot_encode_sequence(seq, num_tokens=len(self.token_to_idx)) 
             for seq in self.X_train
@@ -57,10 +55,9 @@ class RLExperiment(BaseExperiment):
         seq_length = len(self.train_df["sequence"].iloc[0])
         self.lstm_model = goal_directed_lstm.GoalDirectedLSTM(
             vocab_size=len(self.token_to_idx),
-            embedding_dim=16,
+            embedding_dim=32,
             sequence_length=seq_length,
-            hidden_dim=32,
-            goal_score=1
+            hidden_dim=128,
         )
         self._pretrain_lstm()
         
@@ -100,7 +97,7 @@ class RLExperiment(BaseExperiment):
         )
         L = one_hot_sequence.shape[0]
         
-        self.oracle = oracle.Oracle_GB1(L, token_to_idx=self.token_to_idx, seed=self.seed)
+        self.oracle = oracle.load_GB1_oracle()
         
         # Prepare training data
         self.X_train = np.array([
@@ -110,6 +107,7 @@ class RLExperiment(BaseExperiment):
         
         # Score training sequences with oracle
         self.y_train = self.oracle.score_batch(self.train_df["sequence"])
+        self.max_score = self.y_train.max()
     
     def _pretrain_lstm(self):
         """Pretrain LSTM on training data."""
@@ -216,20 +214,21 @@ class RLExperiment(BaseExperiment):
         # Generate sequences
         new_sequences = []
         for _ in range(self.rl_config.batch_size):
-            seq = self.lstm_model.generate(goal_score=1.1, temperature=temp)
+            seq = self.lstm_model.generate(goal_score=self.max_score, temperature=temp) #TODO: goal:socre changed from 1.1 to 0.5
             new_sequences.append(seq)
         
         new_sequences_np = np.array(new_sequences)
         self.all_generated_sequences.extend(new_sequences_np)
         
-        # Score with surrogate (RF)
+        # Score with surrogate (MLP)
         surrogate_scores = self._predict_surrogate_batch(new_sequences_np)
         
         # Score with oracle
         oracle_scores = np.array([
             self._evaluate_oracle(seq) for seq in new_sequences_np
         ])
-        
+
+        self.max_score = max(self.max_score, oracle_scores.max())
         # Select top 20% by surrogate score
         threshold = np.percentile(surrogate_scores, 80)
         top_mask = surrogate_scores >= threshold
@@ -320,7 +319,7 @@ class RLExperiment(BaseExperiment):
         # Create dataloader and train
         dataloader = DataLoader(
             TensorDataset(x_combined, y_combined),
-            batch_size=16,
+            batch_size=64,
             shuffle=True
         )
         

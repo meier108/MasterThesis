@@ -23,7 +23,9 @@ from typing import Dict
 from models import random_forest, mlp
 
 from assets.data_ops import load_data, build_tfbind8_dataframe, encode_sequence, one_hot_encode_sequence
+from assets.compute_metrics import min_hamming_distance
 from data.create_split import create_split
+from tqdm import tqdm
 
 
 
@@ -81,73 +83,27 @@ def main():
     print('Models trained. Starting evaluation on test set...')
 
     # Evaluate models on test set
-    test_data = df[df["split"] != "train"]
-    rf_predictions = [predict_surrogate(rf_model, seq, token_to_idx) for seq in test_data['sequence']]
-    mlp_predictions = [predict_surrogate(mlp_model, seq, token_to_idx) for seq in test_data['sequence']]
-    oracle_scores = test_data['binding_scores'].to_numpy(dtype=np.float32)
+    test_data = df[df["split"] != "train"].copy()
 
-    #save predictions and oracle scores to csv
-    predictions_df = pd.DataFrame({
-        "sequence": test_data['sequence'],
-        "oracle_score": oracle_scores,
-        "rf_prediction": rf_predictions,
-        "mlp_prediction": mlp_predictions,
-        "split": test_data['split']
-    })
+    # Initialize new columns
+    test_data['min_hamming_distance'] = 0
+    test_data['rf_prediction'] = 0.0
+    test_data['mlp_prediction'] = 0.0
 
-    predictions_df.to_csv("results/predictions_TFBind8_v2.csv", index=False)
+    # Calculate minimum Hamming distance to training set for each test sequence
+    test_data['min_hamming_distance'] = min_hamming_distance(
+        np.stack([encode_sequence(seq, token_to_idx) for seq in test_data['sequence']]),
+        np.stack([encode_sequence(seq, token_to_idx) for seq in train_df['sequence']])
+    )
 
-    # Calculate metrics -> for complete Test Data
-    rf_spearmanr = calculate_spearmanr(oracle_scores, rf_predictions)
-    mlp_spearmanr = calculate_spearmanr(oracle_scores, mlp_predictions)
-    
-    rf_mse = calculate_mse(oracle_scores, rf_predictions)
-    mlp_mse = calculate_mse(oracle_scores, mlp_predictions)
-    
-    rf_bias = calculate_bias(oracle_scores, rf_predictions)
-    mlp_bias = calculate_bias(oracle_scores, mlp_predictions)
+    for seq in tqdm(test_data['sequence']):
+        score_rf = predict_surrogate(rf_model, seq, token_to_idx)
+        score_mlp = predict_surrogate(mlp_model, seq, token_to_idx)
+        test_data.loc[test_data['sequence'] == seq, 'rf_prediction'] = score_rf
+        test_data.loc[test_data['sequence'] == seq, 'mlp_prediction'] = score_mlp
 
-    # Print results
-    print(f"Random Forest - Spearman's r: {rf_spearmanr:.4f}, MSE: {rf_mse:.4f}, Bias: {rf_bias:.4f}")
-    print(f"MLP - Spearman's r: {mlp_spearmanr:.4f}, MSE: {mlp_mse:.4f}, Bias: {mlp_bias:.4f}")
-    
-    # Store results in metrics.csv
-    results_df = pd.DataFrame({
-        "model": ["Random Forest", "MLP"],
-        "spearmanr": [rf_spearmanr, mlp_spearmanr],
-        "mse": [rf_mse, mlp_mse],
-        "bias": [rf_bias, mlp_bias]
-    })
-
-    # Calculate metrics for each split
-    for split in test_data['split'].unique():
-        split_data = test_data[test_data['split'] == split]
-        split_oracle_scores = split_data['binding_scores'].to_numpy(dtype=np.float32)
-        split_rf_predictions = [predict_surrogate(rf_model, seq, token_to_idx) for seq in split_data['sequence']]
-        split_mlp_predictions = [predict_surrogate(mlp_model, seq, token_to_idx) for seq in split_data['sequence']]
-
-        split_rf_spearmanr = calculate_spearmanr(split_oracle_scores, split_rf_predictions)
-        split_mlp_spearmanr = calculate_spearmanr(split_oracle_scores, split_mlp_predictions)
-        
-        split_rf_mse = calculate_mse(split_oracle_scores, split_rf_predictions)
-        split_mlp_mse = calculate_mse(split_oracle_scores, split_mlp_predictions)
-        
-        split_rf_bias = calculate_bias(split_oracle_scores, split_rf_predictions)
-        split_mlp_bias = calculate_bias(split_oracle_scores, split_mlp_predictions)
-
-        print(f"Split: {split} - Random Forest - Spearman's r: {split_rf_spearmanr:.4f}, MSE: {split_rf_mse:.4f}, Bias: {split_rf_bias:.4f}")
-        print(f"Split: {split} - MLP - Spearman's r: {split_mlp_spearmanr:.4f}, MSE: {split_mlp_mse:.4f}, Bias: {split_mlp_bias:.4f}")
-
-        # Append split results to metrics.csv
-        split_results_df = pd.DataFrame({
-            "model": [f"Random Forest ({split})", f"MLP ({split})"],
-            "spearmanr": [split_rf_spearmanr, split_mlp_spearmanr],
-            "mse": [split_rf_mse, split_mlp_mse],
-            "bias": [split_rf_bias, split_mlp_bias]
-        })
-        results_df = pd.concat([results_df, split_results_df], ignore_index=True)
-
-    results_df.to_csv("results/metrics_TFBind8_v2.csv", index=False)
+ 
+    test_data.to_csv("results/tfbind8_sequences_scored.csv", index=False)
 
 if __name__ == "__main__":
     main()

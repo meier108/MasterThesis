@@ -3,12 +3,12 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 class GoalDirectedLSTM(nn.Module):
-    def __init__(self, vocab_size, sequence_length, embedding_dim, hidden_dim, goal_score):
+    def __init__(self, vocab_size, sequence_length, embedding_dim, hidden_dim):
         super().__init__()
         self.sequence_length = sequence_length
         self.embedding = nn.Embedding(vocab_size, embedding_dim)
         self.vocab_size = vocab_size
-        self.lstm = nn.LSTM(embedding_dim + goal_score, hidden_dim, batch_first=True)
+        self.lstm = nn.LSTM(embedding_dim + 1, hidden_dim, batch_first=True)
         self.fc = nn.Linear(hidden_dim, vocab_size)
 
     def forward(self, seq, goal_score, hidden=None):

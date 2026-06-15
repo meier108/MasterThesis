@@ -1,13 +1,12 @@
 """Single Mutant Walker experiment implementation."""
 
-from typing import List, Dict, Optional
+from typing import List
 import numpy as np
-import pandas as pd
 
 from base_experiment import BaseExperiment
 from trajectory import TrajectoryRecord
 from experiment_config import ExperimentConfig
-from models import oracle, random_forest, single_mutant_walker
+from models import oracle, single_mutant_walker, mlp
 from assets.data_ops import load_data, build_tfbind8_dataframe, encode_sequence, one_hot_encode_sequence
 
 
@@ -38,7 +37,7 @@ class SMWExperiment(BaseExperiment):
             raise ValueError(f"Unknown dataset: {self.config.dataset}")
         
         # Initialize surrogate model
-        model = random_forest.RandomForestModel(n_estimators=200, random_state=self.seed)
+        model = mlp.MLPModel()
         self.surrogate = self._fit_surrogate(model)
         
         # Initialize walker
@@ -151,7 +150,7 @@ class SMWExperiment(BaseExperiment):
                 iteration=0,
                 run_id=self.run_id,
                 seed=self.seed,
-                min_hamming_distance=0,  # Will be filled in later
+                min_hamming_distance=1,
                 dataset=self.config.dataset,
                 transcription_factor=self.smw_config.transcription_factor,
             )
@@ -198,7 +197,7 @@ class SMWExperiment(BaseExperiment):
                     iteration=iteration + 1,  # +1 because iteration 0 is seed
                     run_id=self.run_id,
                     seed=self.seed,
-                    min_hamming_distance=0,  # Will be filled in later
+                    min_hamming_distance=1,
                     dataset=self.config.dataset,
                     transcription_factor=self.smw_config.transcription_factor,
                 )
