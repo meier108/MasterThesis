@@ -192,4 +192,8 @@ def create_split(df: pd.DataFrame,
     # For TEST B: all sequences BEYOND training radius (any fitness level)
     df.loc[beyond_radius_df.index, 'split'] = 'test_b'
 
+    # Print number of training samples
+    n_train = (df['split'] == 'train').sum()
+    print(f"Selected {n_train} training samples.")
+
     return df

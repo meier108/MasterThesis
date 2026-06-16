@@ -26,7 +26,7 @@ class RLExperiment(BaseExperiment):
         self.rl_config = config.rl_config
         self.X_train = None  # For replay
         self.y_train = None  # For replay
-        
+        self.seen_sequences = set() # For diversity filtering
         # For diversity filtering during iterations
         self.all_generated_sequences = []
         self.max_score = 1.0
@@ -244,7 +244,7 @@ class RLExperiment(BaseExperiment):
             )
         
         # TODO: Filter out sequences already seen in previous iterations
-        '''
+        
         new_mask = []
         for i, seq_encoded in enumerate(top_sequences):
             seq_str = decode_sequence(seq_encoded, alphabet=list(self.token_to_idx.keys()))
@@ -262,7 +262,7 @@ class RLExperiment(BaseExperiment):
             top_sequences = top_sequences[:1] if len(top_sequences) > 0 else np.array([])
             top_surrogate_scores = top_surrogate_scores[:1] if len(top_surrogate_scores) > 0 else np.array([])
             top_oracle_scores = top_oracle_scores[:1] if len(top_oracle_scores) > 0 else np.array([])
-        '''
+        
 
         # Create trajectory records
         for seq_encoded, surrogate_score, oracle_score in zip(

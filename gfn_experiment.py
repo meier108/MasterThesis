@@ -87,12 +87,7 @@ class GFlowNetExperiment(BaseExperiment):
         df = load_data(name="gb1")
         self.train_df = df[df["split"] == "train"].copy()
 
-        one_hot = one_hot_encode_sequence(
-            encode_sequence(self.train_df["sequence"].iloc[0], self.token_to_idx),
-            num_tokens=len(self.token_to_idx)
-        )
-        L = one_hot.shape[0]
-        self.oracle = oracle.Oracle_GB1(L, token_to_idx=self.token_to_idx, seed=self.seed)
+        self.oracle = oracle.load_GB1_oracle()
 
         self.X_train_encoded = np.array([
             encode_sequence(seq, self.token_to_idx) 

@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Thesis Poster – Surrogate Model Robustness</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@300;400;600;700&family=Source+Serif+4:ital,wght@0,400;0,600;1,400&display=swap');
+
+  :root {
+    --jku-blue:  #003366;
+    --jku-light: #005aaa;
+    --accent:    #e8202a;
+    --accent2:   #f59e0b;
+    --bg:        #f8f9fb;
+    --card:      #ffffff;
+    --border:    #d1d9e6;
+    --text:      #1a1a2e;
+    --muted:     #5c6070;
+    --tag-bg:    #e8f0fb;
+    --radius:    6px;
+    --pad:       11px;
+    --gap:       10px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Source Sans 3', sans-serif;
+    font-size: 0.70rem;
+    background: #bbb;
+    color: var(--text);
+    line-height: 1.4;
+  }
+
+  .poster {
+    width: 794px;
+    background: var(--bg);
+    margin: 20px auto;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 4px 30px rgba(0,0,0,.35);
+  }
+
+  /* ── HEADER ── */
+  .header {
+    background: var(--jku-blue);
+    color: white;
+    padding: 16px 18px 12px;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .poster-title {
+    font-family: 'Source Serif 4', serif;
+    font-size: 1.90rem;
+    font-weight: 600;
+    line-height: 1.2;
+    margin-bottom: 7px;
+    color: #fff;
+  }
+  .header-meta {
+    font-size: 0.74rem;
+    font-weight: 300;
+    color: rgba(255,255,255,.85);
+    display: flex;
+    gap: 18px;
+    flex-wrap: wrap;
+  }
+  .header-meta span strong { font-weight: 600; color: #fff; }
+  .logo-box {
+    width: 86px; height: 50px; flex-shrink: 0;
+    border: 1.5px solid rgba(255,255,255,.45);
+    border-radius: 4px;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    font-size: 0.52rem; color: rgba(255,255,255,.6);
+    text-align: center; line-height: 1.3;
+  }
+  .logo-box .lb { font-size: 1.35rem; font-weight: 700; color: rgba(255,255,255,.9); }
+
+  .stripe {
+    height: 5px;
+    background: linear-gradient(90deg, var(--accent) 0%, var(--accent2) 50%, var(--jku-light) 100%);
+  }
+
+  /* ── GRID BODY ── */
+  .body {
+    flex: 1;
+    padding: var(--pad);
+    display: grid;
+    grid-template-columns: 200px 1fr 1fr;
+    grid-template-areas:
+      "left framework framework"
+      "left surrogates surrogates"
+      "left results results"
+      "bottom bottom bottom";
+    gap: var(--gap);
+    align-items: start;
+  }
+
+  /* ── CARDS ── */
+  .card {
+    background: var(--card);
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    padding: 9px 10px;
+  }
+  .card.al { border-left: 3.5px solid var(--accent); }
+  .card.ab { border-left: 3.5px solid var(--jku-light); }
+  .card.aa { border-left: 3.5px solid var(--accent2); }
+  .card.ag { border-left: 3.5px solid #16a34a; }
+
+  .ct {
+    font-size: 0.82rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .055em;
+    color: var(--jku-blue);
+    margin-bottom: 5px;
+    display: flex; align-items: center; gap: 4px;
+  }
+  p { margin-bottom: 4px; }
+  p:last-child { margin-bottom: 0; }
+  ul { padding-left: 1.05em; margin: 0; }
+  ul li { margin-bottom: 3px; }
+  ul li:last-child { margin-bottom: 0; }
+  strong { font-weight: 700; }
+
+  /* ── LEFT COLUMN stack ── */
+  .col-left { grid-area: left; display: flex; flex-direction: column; gap: var(--gap); }
+
+  /* ── NAMED AREAS ── */
+  .area-framework  { grid-area: framework; }
+  .area-surrogates { grid-area: surrogates; }
+  .area-results    { grid-area: results; margin-top: 0; }
+  .area-bottom {
+    grid-area: bottom;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--gap);
+  }
+  .area-bottom .card {
+    padding: 6px 9px;
+  }
+  .area-bottom .ct {
+    font-size: 0.68rem;
+    margin-bottom: 3px;
+  }
+  .area-future ul li {
+    font-size: 0.65rem;
+  }
+
+  /* ── FRAMEWORK (full width, compact single row) ── */
+  .fw-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 6px;
+  }
+  .fw-divider {
+    border-top: 1px solid var(--border);
+    margin: 2px 0;
+  }
+  .fw-rq-label {
+    font-size: 0.60rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: .07em;
+    color: var(--jku-light);
+    margin-bottom: 4px;
+  }
+  .pipe {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    flex-wrap: nowrap;
+    margin-top: 4px;
+  }
+  .pb {
+    background: var(--tag-bg);
+    border: 1px solid var(--jku-light);
+    border-radius: 4px;
+    padding: 3px 5px;
+    font-size: 0.57rem;
+    font-weight: 600;
+    color: var(--jku-blue);
+    text-align: center;
+    line-height: 1.3;
+    white-space: nowrap;
+  }
+  .pb.red   { background: #fdecea; border-color: var(--accent);  color: #8b0000; }
+  .pb.amber { background: #fef3cd; border-color: var(--accent2); color: #7a4a00; }
+  .pb.green { background: #dcfce7; border-color: #16a34a;        color: #166534; }
+  .pa { font-size: 0.80rem; color: var(--muted); line-height: 1; flex-shrink: 0; }
+
+  /* ── RESULTS SECTION ── */
+  .results-section {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 6px;
+  }
+
+  .rq-block {
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  .rq-head {
+    padding: 4px 8px;
+    font-size: 0.60rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: white;
+  }
+  .rq-head.blue  { background: var(--jku-blue); }
+  .rq-head.green { background: #166534; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 0.61rem; }
+  thead th {
+    background: var(--tag-bg);
+    padding: 3px 6px;
+    text-align: left;
+    font-weight: 700;
+    color: var(--jku-blue);
+    border-bottom: 1px solid var(--border);
+  }
+  tbody td { padding: 3px 6px; border-bottom: 1px solid #edf0f5; }
+  tbody tr:last-child td { border-bottom: none; }
+  .hi  { color: #166534; font-weight: 700; }
+  .lo  { color: #991b1b; }
+  .mid { color: #92400e; }
+
+  /* ── IMAGE PLACEHOLDER ── */
+  .ph {
+    background: #edf0f5;
+    border: 1.5px dashed #9aa5b8;
+    border-radius: 5px;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    color: var(--muted);
+    font-size: 0.60rem;
+    text-align: center;
+    padding: 6px;
+    line-height: 1.5;
+    gap: 2px;
+  }
+  .ph .phi { font-size: 1.4rem; }
+  .ph .phl { font-weight: 700; font-size: 0.64rem; color: #4a5568; }
+
+  /* ── KEY FINDING ── */
+  .finding {
+    background: linear-gradient(135deg, #e8f0fb 0%, #f0eaff 100%);
+    border: 1.5px solid var(--jku-light);
+    border-radius: var(--radius);
+    padding: 7px 10px;
+    margin-top: 7px;
+    font-size: 0.65rem;
+  }
+  .finding strong { color: var(--jku-blue); }
+
+  /* ── REFS ── */
+  .refs { font-size: 0.52rem; color: var(--muted); line-height: 1.4; }
+
+  /* ── FOOTER ── */
+  .footer {
+    background: var(--jku-blue);
+    color: rgba(255,255,255,.7);
+    padding: 5px 18px;
+    font-size: 0.57rem;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .footer strong { color: #fff; }
+
+  @media print {
+    body { background: none; }
+    .poster { margin: 0; transform-origin: top left; transform: scale(4.0); width: 794px; box-shadow: none; }
+  }
+</style>
+</head>
+<body>
+<div class="poster">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div style="flex:1">
+      <div class="poster-title">Surrogate Model Robustness in<br>Biological Sequence Design under Distributional Shift</div>
+      <div class="header-meta">
+        <span><strong>Michael [Surname]</strong></span>
+        <span>Supervisor: <strong>[Supervisor Name]</strong></span>
+        <span>Co-Supervisor: <strong>[Co-Supervisor Name]</strong></span>
+        <span>Institute for Machine Learning · JKU Linz</span>
+      </div>
+    </div>
+    <div class="logo-box">
+      <span class="lb">JKU</span>
+      <span>Institute for<br>Machine Learning</span>
+    </div>
+  </div>
+  <div class="stripe"></div>
+
+  <!-- BODY -->
+  <div class="body">
+
+    <!-- ── ROW 1: left col motivation / challenge / idea; right span2: framework ── -->
+
+    <!-- Left col stack -->
+    <div class="col-left">
+
+      <div class="card al">
+        <div class="ct">🔥 Motivation</div>
+        <p>Biological sequence design — finding DNA or protein sequences with high fitness — is a central challenge in computational biology. Surrogate models accelerate optimization by learning to approximate expensive oracle measurements.</p>
+        <p>But optimizers actively push candidates into regions far from training data. Do surrogates remain reliable there?</p>
+      </div>
+
+      <div class="card al">
+        <div class="ct">⚠️ Challenge</div>
+        <p>Surrogates trained on low-fitness sequences must generalize to the high-fitness sequences optimizers find. This <strong>distributional shift</strong>, quantified by <strong>minimum Hamming distance</strong> from the training set, is unavoidable in practice.</p>
+        <p>Overconfident predictions in OOD regions mislead optimizers and waste oracle calls.</p>
+      </div>
+
+      <div class="card ab">
+        <div class="ct">💡 Research Questions</div>
+        <ul>
+          <li><strong>RQ1:</strong> How well do surrogate models (MLP, RF) generalize as Hamming distance from training data increases?</li>
+          <li><strong>RQ2:</strong> How effectively do different optimization strategies find high-fitness sequences when guided by a surrogate?</li>
+        </ul>
+      </div>
+
+      <div class="card" style="border-left:3.5px solid #16a34a;">
+        <div class="ct">🧬 Datasets</div>
+        <ul>
+          <li><strong>TFBind8</strong> — DNA 8-mers; exhaustive oracle (65,536 sequences); binding to transcription factors. Continuous, near-linear landscape.</li>
+          <li><strong>GB1</strong> — Protein G domain; 4-site combinatorial mutations; sparse, epistatically complex fitness landscape.</li>
+          <li>Both: surrogates trained on <strong>bottom 50%</strong> by fitness score.</li>
+        </ul>
+      </div>
+
+    </div>
+
+    <!-- ── FRAMEWORK (cols 2-3) ── -->
+    <div class="card area-framework">
+      <div class="ct">🔬 Experimental Framework</div>
+      <div class="fw-wrap">
+
+        <!-- RQ1 pipeline -->
+        <div>
+          <div class="fw-rq-label">RQ 1 — Surrogate Generalization</div>
+          <div class="pipe">
+            <div class="pb amber">Bottom 50%<br><span style="font-weight:400;color:var(--muted)">training split</span></div>
+            <div class="pa">→</div>
+            <div class="pb">Train<br>MLP / RF</div>
+            <div class="pa">→</div>
+            <div class="pb green">Score holdout<br>(TFBind8: top 50%)<br>(GB1: SMW mutants)</div>
+            <div class="pa">→</div>
+            <div class="pb red">Compare vs oracle<br>at each Hamming dist.</div>
+            <div class="pa">→</div>
+            <div class="pb">ρ · MSE · Bias</div>
+          </div>
+          <p style="font-size:0.57rem;color:var(--muted);margin-top:4px;">
+            <em>GB1 note:</em> exhaustive enumeration infeasible; SMW applied to training split to generate sequences distributed across Hamming distances 1–4 from training data.
+          </p>
+        </div>
+
+        <div class="fw-divider"></div>
+
+        <!-- RQ2 pipeline -->
+        <div>
+          <div class="fw-rq-label">RQ 2 — Sequence Optimization</div>
+          <div class="pipe">
+            <div class="pb amber">Bottom 50%<br><span style="font-weight:400;color:var(--muted)">training split</span></div>
+            <div class="pa">→</div>
+            <div class="pb">Train surrogate<br>+ optimizer</div>
+            <div class="pa">→</div>
+            <div class="pb green">Generate<br>candidates</div>
+            <div class="pa">→</div>
+            <div class="pb red">Score by<br>oracle</div>
+            <div class="pa">→</div>
+            <div class="pb">Max oracle<br>score</div>
+          </div>
+          <p style="font-size:0.57rem;color:var(--muted);margin-top:4px;">
+            <em>Optimizers:</em> <strong>SMW</strong> (naive random-mutation walk) · <strong>RL</strong> (LSTM + surrogate reward) · <strong>GFlowNet</strong> (Jain et al. 2022, diversity-promoting)
+          </p>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ── SURROGATES + OPTIMIZERS (cols 2-3) ── -->
+    <div class="card area-surrogates">
+      <div class="ct">⚙️ Surrogate Models &amp; Optimizers</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px;">
+
+        <div>
+          <div style="font-size:0.66rem;font-weight:700;color:var(--jku-blue);margin-bottom:3px;">Surrogate Models</div>
+          <ul>
+            <li><strong>MLP</strong> — Multi-layer perceptron on one-hot encoded sequences. Flexible, can extrapolate more aggressively (wider prediction distribution: σ = 0.071 on TFBind8 vs. RF σ = 0.033).</li>
+            <li><strong>RF</strong> — Random Forest; ensemble averaging constrains predictions toward training mean, limiting extrapolation range (max prediction 0.424 vs. MLP 0.645 on TFBind8).</li>
+          </ul>
+        </div>
+
+        <div>
+          <div style="font-size:0.66rem;font-weight:700;color:var(--jku-blue);margin-bottom:3px;">Optimizers</div>
+          <ul>
+            <li><strong>SMW (Naive)</strong> — Random-mutation walk scored by surrogate; simple but exploits overconfident predictions.</li>
+            <li><strong>Goal-Directed RL</strong> — Generative LSTM trained via RL with surrogate as reward; broader exploration.</li>
+            <li><strong>GFlowNet</strong> — Samples proportional to fitness; promotes candidate <em>diversity</em> alongside quality.</li>
+          </ul>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ── RESULTS: full width ── -->
+    <div class="card area-results">
+      <div class="ct">📊 Results</div>
+
+      <div class="results-section">
+
+        <!-- RQ1 left: Surrogate generalization table -->
+        <div style="display:flex; flex-direction:column; gap:6px;">
+          <div class="rq-block">
+            <div class="rq-head blue">RQ1 · Surrogate Generalization — Spearman ρ (OOD holdout)</div>
+            <table>
+              <thead><tr><th>Model</th><th>TFBind8</th><th>GB1</th></tr></thead>
+              <tbody>
+                <tr><td>MLP</td><td class="lo">0.27</td><td class="hi">0.65</td></tr>
+                <tr><td>RF</td><td class="mid">0.37</td><td class="lo">0.33</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="rq-block">
+            <div class="rq-head blue">RQ1 · MSE &amp; Bias (mean pred − true) on OOD holdout</div>
+            <table>
+              <thead><tr><th>Model</th><th>TFBind8 MSE</th><th>Bias</th><th>GB1 MSE</th><th>Bias</th></tr></thead>
+              <tbody>
+                <tr><td>MLP</td><td>0.044</td><td class="mid">+0.122</td><td class="hi">14.6</td><td class="mid">+2.94</td></tr>
+                <tr><td>RF</td><td>0.046</td><td class="lo">+0.134</td><td class="lo">23.0</td><td class="lo">+3.81</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- RQ1 right: plot placeholder -->
+        <div class="ph" style="min-height:130px;">
+          <span class="phi">📈</span>
+          <span class="phl">[INSERT: MAE vs. Min. Hamming Distance]</span>
+          <span>Mean absolute error as a function of<br>minimum Hamming distance from training set<br>for MLP and RF on TFBind8 and GB1</span>
+        </div>
+
+        <!-- RQ2 left: optimization table -->
+        <div class="rq-block">
+          <div class="rq-head green">RQ2 · Optimization — Max Oracle Score</div>
+          <table>
+            <thead><tr><th>Method</th><th>TFBind8</th><th>GB1</th></tr></thead>
+            <tbody>
+              <tr><td>SMW (Naive)</td><td class="mid">0.81</td><td class="lo">0.18 ± 0.04</td></tr>
+              <tr><td>Goal-Directed RL</td><td class="hi">0.96 ± 0.03</td><td><span style="color:var(--muted);font-size:0.58rem">pending</span></td></tr>
+              <tr><td>GFlowNet</td><td><span style="color:var(--muted);font-size:0.58rem">pending</span></td><td><span style="color:var(--muted);font-size:0.58rem">pending</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- RQ2 right: plot placeholder -->
+        <div class="ph" style="min-height:100px;">
+          <span class="phi">📈</span>
+          <span class="phl">[INSERT: Optimization Score Plot]</span>
+          <span>Max oracle score per optimizer per dataset<br>(bar chart or progression curve)</span>
+        </div>
+
+      </div>
+
+      <!-- KEY FINDING -->
+      <div class="finding">
+        <strong>Key findings:</strong>
+        (RQ1) Surrogate performance is <strong>dataset-dependent</strong>: MLP strongly outperforms RF on GB1 (ρ 0.65 vs. 0.33) but is slightly weaker on TFBind8 (ρ 0.27 vs. 0.37). Both models degrade monotonically as minimum Hamming distance from training data increases. Both exhibit <strong>systematic positive bias</strong> — consistently overestimating fitness in OOD regions — a structural consequence of training exclusively on low-fitness sequences, not an artifact of model choice.
+        (RQ2) Goal-directed RL substantially outperforms the naive SMW baseline on TFBind8 (0.96 vs. 0.81 max oracle score), demonstrating the value of learned generation strategies.
+      </div>
+    </div>
+
+    <!-- ── FUTURE WORK + REFS full width ── -->
+    <div class="area-bottom">
+
+      <div class="card aa area-future">
+        <div class="ct">🔭 Future Work</div>
+        <ul>
+          <li><strong>Complete RL/GB1 &amp; GFlowNet experiments</strong> — finalize all optimizer–dataset combinations.</li>
+          <li><strong>Calibration</strong> — investigate whether uncertainty-aware surrogates (ensembles, MC-Dropout) reduce OOD overestimation bias.</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <div class="ct">📚 References</div>
+        <div class="refs">
+          [1] Jain et al. (2022). Biological Sequence Design with GFlowNets. NeurIPS.<br>
+          [2] Angermueller et al. (2020). Population-Based Black-Box Optimization for Biological Sequence Design. ICLR.<br>
+          [3] Trabucco et al. (2022). DesignBench: Benchmarks for Data-Driven Offline Model-Based Optimization. ICML.<br>
+          [4] Brookes &amp; Listgarten (2020). Design by Adaptive Sampling.<br>
+          [5] Kim et al. (2025). Improved Off-Policy Reinforcement Learning in Biological Sequence Design.<br>
+          [6] Trabucco et al. (2021). Conservative Objective Models for Effective Offline Model-Based Optimization.
+        </div>
+      </div>
+
+    </div>
+
+  </div><!-- /body -->
+
+  <div class="footer">
+    <span>Master's Thesis · Johannes Kepler University Linz · Institute for Machine Learning · 2025</span>
+    <span><strong>[your.email@jku.at]</strong></span>
+  </div>
+
+</div>
+</body>
+</html>

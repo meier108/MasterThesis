@@ -28,7 +28,7 @@ class RLConfig:
     temp_start: float = 0.5
     temp_end: float = 1.0
     entropy_weight: float = 0.01
-    lstm_epochs: int = 50
+    lstm_epochs: int = 30
     lr: float = 1e-3
 
 @dataclass
@@ -60,7 +60,7 @@ class ExperimentConfig:
     method: str  # "smw" or "rl"
     dataset: str  # "tfbind8" or "gb1"
     seed: int = 42
-    num_runs: int = 10
+    num_runs: int = 1
     
     # Method-specific configs
     smw_config: Optional[SMWConfig] = None
@@ -113,7 +113,7 @@ EXPERIMENT_CONFIGS: Dict[str, ExperimentConfig] = {
         rl_config=RLConfig(
             transcription_factor=None,
             num_iterations=10,
-            batch_size=128,  # Smaller for GB1
+            batch_size=265,  # Smaller for GB1
         ),
     ),
     "gfn_tfbind8": ExperimentConfig(
@@ -124,7 +124,16 @@ EXPERIMENT_CONFIGS: Dict[str, ExperimentConfig] = {
             num_iterations=5,
             batch_size=64,
         ),
-    )
+    ),
+    "gfn_gb1": ExperimentConfig(
+        method='gfn', 
+        dataset = 'gb1',
+        gfn_config = GFlowNetConfig(
+            transcription_factor=None,
+            num_iterations=5,
+            batch_size=256,
+        ),
+    ),
 }
 
 
