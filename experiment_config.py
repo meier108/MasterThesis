@@ -35,23 +35,19 @@ class RLConfig:
 class GFlowNetConfig:
 
     transcription_factor: Optional[str] = "SIX6_REF_R1"  # None for GB1
-    num_iterations: int = 5
+    num_iterations: int = 15
     batch_size: int = 64
 
+    # GFlowNet architecture + training
     hidden_dim: int = 2048
     gfn_lr: float = 1e-5
     log_z_lr: float = 1e-3
-    gfn_train_steps: int = 2000 #set down from 5000 for testing
+    gfn_train_steps: int = 5000
     minibatch_size: int = 32
     delta: float = 0.001
     beta: float = 3.0
     gamma: float = 0.5
     top_k_ratio: float = 0.8
-
-    n_proxy_members: int = 5
-    proxy_lr: float = 1e-4
-    proxy_epochs: int = 20 # set down from 50 for testing
-    kappa: float = 0.1
 
 @dataclass
 class ExperimentConfig:
@@ -60,7 +56,7 @@ class ExperimentConfig:
     method: str  # "smw" or "rl"
     dataset: str  # "tfbind8" or "gb1"
     seed: int = 42
-    num_runs: int = 1
+    num_runs: int = 10
     
     # Method-specific configs
     smw_config: Optional[SMWConfig] = None
@@ -84,7 +80,7 @@ EXPERIMENT_CONFIGS: Dict[str, ExperimentConfig] = {
         smw_config=SMWConfig(
             transcription_factor="SIX6_REF_R1",
             target_split=None,
-            num_iterations=20,
+            num_iterations=15,
             mutants_per_round=10,
         ),
     ),
@@ -94,7 +90,7 @@ EXPERIMENT_CONFIGS: Dict[str, ExperimentConfig] = {
         smw_config=SMWConfig(
             transcription_factor=None,
             target_split=None,
-            num_iterations=20,
+            num_iterations=15,
             mutants_per_round=10,
         ),
     ),
@@ -103,7 +99,7 @@ EXPERIMENT_CONFIGS: Dict[str, ExperimentConfig] = {
         dataset="tfbind8",
         rl_config=RLConfig(
             transcription_factor="SIX6_REF_R1",
-            num_iterations=10,
+            num_iterations=15,
             batch_size=265,
         ),
     ),
@@ -112,7 +108,7 @@ EXPERIMENT_CONFIGS: Dict[str, ExperimentConfig] = {
         dataset="gb1",
         rl_config=RLConfig(
             transcription_factor=None,
-            num_iterations=10,
+            num_iterations=15,
             batch_size=265,  # Smaller for GB1
         ),
     ),
@@ -121,7 +117,7 @@ EXPERIMENT_CONFIGS: Dict[str, ExperimentConfig] = {
         dataset='tfbind8',
         gfn_config = GFlowNetConfig(
             transcription_factor='SIX6_REF_R1',
-            num_iterations=5,
+            num_iterations=15,
             batch_size=64,
         ),
     ),
@@ -130,7 +126,7 @@ EXPERIMENT_CONFIGS: Dict[str, ExperimentConfig] = {
         dataset = 'gb1',
         gfn_config = GFlowNetConfig(
             transcription_factor=None,
-            num_iterations=5,
+            num_iterations=15,
             batch_size=256,
         ),
     ),

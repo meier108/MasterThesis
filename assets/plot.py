@@ -553,6 +553,74 @@ def plot_trajectory_optimization_progress(
 	axes[1].grid(True, alpha=0.3)
 	
 	plt.tight_layout()
-	
+
+	return fig, axes
+
+
+def _compute_topk_curve(df, k, oracle_col, iteration_col, run_col):
+	"""Return (iterations, means, stds) for cumulative top-k mean per iteration."""
+	max_iter = int(df[iteration_col].max())
+	iterations = list(range(1, max_iter + 1))
+	run_ids = df[run_col].unique()
+	per_cutoff_per_run = np.full((len(iterations), len(run_ids)), np.nan)
+	for ri, run_id in enumerate(run_ids):
+		run_df = df[df[run_col] == run_id]
+		for ci, cutoff in enumerate(iterations):
+			subset = run_df[run_df[iteration_col] <= cutoff]
+			if len(subset) == 0:
+				continue
+			top_k = subset.nlargest(min(k, len(subset)), oracle_col)[oracle_col]
+			per_cutoff_per_run[ci, ri] = top_k.mean()
+	means = np.nanmean(per_cutoff_per_run, axis=1)
+	stds = np.nanstd(per_cutoff_per_run, axis=1)
+	return iterations, means, stds
+
+
+def plot_topk_over_iterations(
+	dataframes_dict,
+	k=10,
+	oracle_col='oracle_score',
+	iteration_col='iteration',
+	run_col='run_id',
+):
+	"""Plot mean top-k oracle score as iterations accumulate, one subplot per strategy.
+
+	Each method gets its own panel so wildly different score scales (e.g. SMW on
+	GB1 vs RL/GFN) don't squash any curve against the x-axis.  The shaded band
+	shows ±1 std across independent runs.
+
+	Args:
+		dataframes_dict: Dict mapping strategy name -> DataFrame.
+		k:               Number of top sequences to average (default 10).
+		oracle_col:      Column with oracle scores.
+		iteration_col:   Column with iteration index.
+		run_col:         Column identifying independent runs.
+
+	Returns:
+		(fig, axes) — the Figure and array of Axes.
+	"""
+	n = len(dataframes_dict)
+	fig, axes = plt.subplots(1, n, figsize=(5 * n, 5), sharey=False)
+	if n == 1:
+		axes = [axes]
+
+	colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
+
+	for ax, (strategy_name, df), color in zip(axes, dataframes_dict.items(), colors):
+		iterations, means, stds = _compute_topk_curve(df, k, oracle_col, iteration_col, run_col)
+
+		ax.plot(iterations, means, marker='o', linewidth=2, markersize=5,
+				color=color, label=strategy_name)
+		ax.fill_between(iterations, means - stds, means + stds, alpha=0.15, color=color)
+
+		ax.set_xlabel('Iterations (cumulative)', fontsize=11)
+		ax.set_ylabel(f'Mean Top-{k} Oracle Score', fontsize=11)
+		ax.set_title(strategy_name, fontsize=12)
+		ax.set_xticks(iterations)
+		ax.grid(alpha=0.3)
+
+	fig.suptitle(f'Top-{k} Score vs. Number of Iterations', fontsize=13, y=1.02)
+	plt.tight_layout()
+
 	return fig, axes
 

@@ -150,7 +150,7 @@ class ExperimentRunner:
         Returns:
             Path to saved CSV
         """
-        filename = f"trajectory_{self.keyword}_test.csv" #TODO: remove _test
+        filename = f"trajectory_{self.keyword}.csv"
         filepath = self.results_dir / filename
         
         df.to_csv(filepath, index=False)

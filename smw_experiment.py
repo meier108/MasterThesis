@@ -78,17 +78,8 @@ class SMWExperiment(BaseExperiment):
         df = load_data(name="gb1")
         self.train_df = df[df["split"] == "train"].copy()
         
-        # Get sequence length
-        one_hot_sequence = one_hot_encode_sequence(
-            encode_sequence(self.train_df['sequence'].iloc[0], self.token_to_idx),
-            num_tokens=len(self.token_to_idx)
-        )
-        L = one_hot_sequence.shape[0]
+        self.oracle = oracle.load_GB1_oracle()
         
-        self.oracle = oracle.Oracle_GB1(L, token_to_idx=self.token_to_idx, seed=self.seed)
-        # TODO: maybe load the pretrained oracle here -> more realistic scores than the random initialized one
-        
-
         # Score training sequences with oracle
         self.train_df["binding_scores"] = self.oracle.score_batch(self.train_df["sequence"])
     
