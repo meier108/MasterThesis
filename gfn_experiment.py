@@ -33,10 +33,13 @@ class GFlowNetExperiment(BaseExperiment):
         super().__init__(config, run_id)
         self.gfn_config = config.gfn_config
 
+        # Device: GPU if available, else CPU
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
         # GFlowNet model
         self.gfn = None
 
-        # Shared MLP surrogate (same as SMW/RL)
+        # Shared MLP surrogate (same as SMW/RL) — always on CPU (sklearn)
         self.surrogate = None
 
         # Growing dataset: ground-truth labels for training split,
@@ -70,7 +73,9 @@ class GFlowNetExperiment(BaseExperiment):
             vocab_size = vocab_size,
             seq_length = seq_length,
             hidden_dim = self.gfn_config.hidden_dim
-        )
+        ).to(self.device)
+
+        print(f"  Device: {self.device}")
 
     def _setup_tfbind8(self):
         alphabet = ["A", "C", "G", "T"]
@@ -156,7 +161,7 @@ class GFlowNetExperiment(BaseExperiment):
         idx = np.random.choice(len(self.data_X), size=n, replace=(n > len(self.data_X)))
         seqs = self.data_X[idx]
         rewards = self.data_y[idx]
-        return torch.LongTensor(seqs), torch.FloatTensor(rewards)
+        return torch.LongTensor(seqs).to(self.device), torch.FloatTensor(rewards).to(self.device)
     
     def _train_gflownet(self):
         '''
@@ -182,9 +187,9 @@ class GFlowNetExperiment(BaseExperiment):
         self.gfn.train()
         for step in range(cfg.gfn_train_steps):
             optimizer.zero_grad()
-            online_seqs = self.gfn.sample_sequence(n_online, temperature=1.0, delta = cfg.delta)
-            online_rewards = self._get_reward(online_seqs.numpy())
-            online_rewards_t = torch.FloatTensor(online_rewards)
+            online_seqs = self.gfn.sample_sequence(n_online, temperature=1.0, delta=cfg.delta)
+            online_rewards = self._get_reward(online_seqs.cpu().numpy())
+            online_rewards_t = torch.FloatTensor(online_rewards).to(self.device)
 
             offline_seqs, offline_rewards_t = self._offline_trajectories(n_offline)
 
@@ -208,7 +213,7 @@ class GFlowNetExperiment(BaseExperiment):
         cfg = self.gfn_config
         n_samples = int(cfg.batch_size / cfg.top_k_ratio)
 
-        generated = self.gfn.sample_sequence(n_samples, temperature=1.0, delta=cfg.delta).numpy()
+        generated = self.gfn.sample_sequence(n_samples, temperature=1.0, delta=cfg.delta).cpu().numpy()
 
         X_oh = np.stack([
             one_hot_encode_sequence(seq, num_tokens=len(self.token_to_idx))

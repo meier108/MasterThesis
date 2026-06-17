@@ -56,7 +56,7 @@ class ExperimentConfig:
     method: str  # "smw" or "rl"
     dataset: str  # "tfbind8" or "gb1"
     seed: int = 42
-    num_runs: int = 10
+    num_runs: int = 1
     
     # Method-specific configs
     smw_config: Optional[SMWConfig] = None

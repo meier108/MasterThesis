@@ -144,7 +144,7 @@ class GFlowNetMLP(nn.Module):
     def _encode_partial(self, partial_seq: torch.Tensor) -> torch.Tensor:
         '''One-hot encode a partial sequence. '''
         batch_size, t = partial_seq.shape
-        context = torch.zeros(batch_size, self.seq_length, self.vocab_size)
+        context = torch.zeros(batch_size, self.seq_length, self.vocab_size, device=partial_seq.device)
 
         if t > 0:
             for i in range(t):
@@ -162,7 +162,7 @@ class GFlowNetMLP(nn.Module):
     def get_log_pf(self, sequences: torch.LongTensor) -> torch.Tensor:
         '''Compute log P_F(x) for a batch of complete sequences.'''
         batch_size= sequences.shape[0]
-        log_pf = torch.zeros(batch_size)
+        log_pf = torch.zeros(batch_size, device=sequences.device)
 
         for t in range(self.seq_length):
             partial_seq = sequences[:, :t]
@@ -182,12 +182,13 @@ class GFlowNetMLP(nn.Module):
         - temperature: softmax temperature for sampling higher => more diverse
         - delta: uniform exploration coefficient (0.001 for TFBind8 in paper)
         '''
+        device = self.log_z.device
         self.eval()
-        sequences = torch.zeros(batch_size, self.seq_length, dtype= torch.long)
+        sequences = torch.zeros(batch_size, self.seq_length, dtype=torch.long, device=device)
 
         with torch.no_grad():
             for t in range(self.seq_length):
-                partial_seq = sequences[: , : t]
+                partial_seq = sequences[:, :t]
                 logits = self.forward(partial_seq) / temperature
                 probs = F.softmax(logits, dim=-1)
                 uniform = torch.ones_like(probs) / self.vocab_size
