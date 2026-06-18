@@ -18,11 +18,20 @@ def decode_sequence(encoded: np.ndarray, alphabet: List[str]) -> str:
 def encode_sequence(sequence: str, token_to_idx: Dict[str, int]) -> np.ndarray:
     return np.array([token_to_idx[token] for token in sequence], dtype=np.int32)
 
-def one_hot_encode_sequence(sequence: np.array, num_tokens:int) -> np.ndarray:
-    one_hot = np.zeros((len(sequence), num_tokens), dtype=np.float32)
-    for i, token in enumerate(sequence):
-        one_hot[i, int(token)] = 1.0
+def one_hot_encode_sequence(sequence: np.array, num_tokens: int) -> np.ndarray:
+    seq = np.asarray(sequence, dtype=np.int32)
+    one_hot = np.zeros((len(seq), num_tokens), dtype=np.float32)
+    one_hot[np.arange(len(seq)), seq] = 1.0
     return one_hot.flatten()
+
+def one_hot_encode_batch(sequences: np.ndarray, num_tokens: int) -> np.ndarray:
+    '''Vectorized batch one-hot encoding. sequences: (N, L) int array → (N, L*num_tokens).'''
+    N, L = sequences.shape
+    out = np.zeros((N, L, num_tokens), dtype=np.float32)
+    rows = np.repeat(np.arange(N), L)
+    cols = np.tile(np.arange(L), N)
+    out[rows, cols, sequences.flatten()] = 1.0
+    return out.reshape(N, -1)
 
 def one_hot_decode_sequence(encoded: np.ndarray, alphabet: List[str]) -> np.ndarray:
     num_tokens = len(alphabet)

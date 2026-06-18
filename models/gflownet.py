@@ -144,12 +144,11 @@ class GFlowNetMLP(nn.Module):
     def _encode_partial(self, partial_seq: torch.Tensor) -> torch.Tensor:
         '''One-hot encode a partial sequence. '''
         batch_size, t = partial_seq.shape
-        context = torch.zeros(batch_size, self.seq_length, self.vocab_size, device=partial_seq.device)
-
+        context = torch.zeros(batch_size, self.seq_length * self.vocab_size, device=partial_seq.device)
         if t > 0:
-            for i in range(t):
-                context[:, i, :].scatter_(1, partial_seq[:, i:i+1], 1.0)
-        return context.view(batch_size, -1)  # Flatten to (batch_size, seq_length * vocab_size)
+            oh = F.one_hot(partial_seq, num_classes=self.vocab_size).float()  # (B, t, V)
+            context[:, :t * self.vocab_size] = oh.view(batch_size, -1)
+        return context
     
     def forward(self, partial_seq: torch.Tensor) -> torch.Tensor:
         '''

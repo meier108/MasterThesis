@@ -6,7 +6,7 @@ from base_experiment import BaseExperiment
 from trajectory import TrajectoryRecord
 from experiment_config import ExperimentConfig
 from models import gflownet, oracle, mlp
-from assets.data_ops import load_data, build_tfbind8_dataframe, encode_sequence, one_hot_encode_sequence, decode_sequence
+from assets.data_ops import load_data, build_tfbind8_dataframe, encode_sequence, one_hot_encode_batch, decode_sequence
 
 
 class GFlowNetExperiment(BaseExperiment):
@@ -63,10 +63,7 @@ class GFlowNetExperiment(BaseExperiment):
 
         # Fit MLP surrogate on ground-truth training labels
         self.surrogate = mlp.MLPModel()
-        X_oh = np.stack([
-            one_hot_encode_sequence(seq, num_tokens=vocab_size)
-            for seq in self.data_X
-        ])
+        X_oh = one_hot_encode_batch(self.data_X, num_tokens=vocab_size)
         self.surrogate.fit(X_oh, self.data_y)
 
         self.gfn = gflownet.GFlowNetMLP(
@@ -111,10 +108,7 @@ class GFlowNetExperiment(BaseExperiment):
     ### Surrogate training
 
     def _fit_surrogate(self):
-        X_oh = np.stack([
-            one_hot_encode_sequence(seq, num_tokens=len(self.token_to_idx))
-            for seq in self.data_X
-        ])
+        X_oh = one_hot_encode_batch(self.data_X, num_tokens=len(self.token_to_idx))
         self.surrogate.fit(X_oh, self.data_y)
     
     ### GFlowNet training
@@ -143,10 +137,7 @@ class GFlowNetExperiment(BaseExperiment):
         Compute reward R(x) = surrogate(x)^β for an array of encoded sequences.
         Scores are shifted to be strictly positive before exponentiation.
         '''
-        X_oh = np.stack([
-            one_hot_encode_sequence(seq, num_tokens=len(self.token_to_idx))
-            for seq in sequences_encoded
-        ])
+        X_oh = one_hot_encode_batch(sequences_encoded, num_tokens=len(self.token_to_idx))
         scores = self.surrogate.predict(X_oh).astype(np.float32)
         scores_shifted = scores - scores.min() + 1e-3
         rewards = np.power(scores_shifted, self.gfn_config.beta).astype(np.float32)
@@ -215,10 +206,7 @@ class GFlowNetExperiment(BaseExperiment):
 
         generated = self.gfn.sample_sequence(n_samples, temperature=1.0, delta=cfg.delta).cpu().numpy()
 
-        X_oh = np.stack([
-            one_hot_encode_sequence(seq, num_tokens=len(self.token_to_idx))
-            for seq in generated
-        ])
+        X_oh = one_hot_encode_batch(generated, num_tokens=len(self.token_to_idx))
         surrogate_scores = self.surrogate.predict(X_oh).astype(np.float32)
 
         top_k_idx = np.argsort(surrogate_scores)[::-1][:cfg.batch_size]
