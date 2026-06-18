@@ -1,7 +1,7 @@
 import sys
 import os
-sys.path.insert(0, '/Users/meier/Documents/MasterThesis')
-os.chdir('/Users/meier/Documents/MasterThesis')
+#sys.path.insert(0, '/Users/meier/Documents/MasterThesis')
+#os.chdir('/Users/meier/Documents/MasterThesis')
 
 import numpy as np
 import pandas as pd
