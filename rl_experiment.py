@@ -228,7 +228,7 @@ class RLExperiment(BaseExperiment):
             self._evaluate_oracle(seq) for seq in new_sequences_np
         ])
 
-        self.max_score = max(self.max_score, oracle_scores.max())
+        self.max_score = max(self.max_score, surrogate_scores.max()) #Changed from oracle_scores.max() to surrogate scores, as we dont know oracle scores
         # Select top 20% by surrogate score
         threshold = np.percentile(surrogate_scores, 80)
         top_mask = surrogate_scores >= threshold
