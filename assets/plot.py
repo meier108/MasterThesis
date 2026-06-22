@@ -214,29 +214,30 @@ def plot_metrics_vs_hamming_distance(
 		_, ax = plt.subplots(figsize=(12, 6))
 	
 	# Plot RF metrics with error band
-	ax.plot(x, grouped['mean_error_rf'], label='RF vs Oracle', color='tab:blue', linewidth=2)
+	ax.plot(x, grouped['mean_error_rf'], label='RF vs Oracle', color='tab:red', linewidth=2)
 	ax.fill_between(
 		x,
-		grouped['mean_error_rf'] - grouped['std_error_rf'],
+		np.maximum(0, grouped['mean_error_rf'] - grouped['std_error_rf']),
 		grouped['mean_error_rf'] + grouped['std_error_rf'],
+		color='tab:red',
+		alpha=0.2
+	)
+
+	# Plot MLP metrics with error band
+	ax.plot(x, grouped['mean_error_mlp'], label='MLP vs Oracle', color='tab:blue', linewidth=2)
+	ax.fill_between(
+		x,
+		np.maximum(0, grouped['mean_error_mlp'] - grouped['std_error_mlp']),
+		grouped['mean_error_mlp'] + grouped['std_error_mlp'],
 		color='tab:blue',
 		alpha=0.2
 	)
 	
-	# Plot MLP metrics with error band
-	ax.plot(x, grouped['mean_error_mlp'], label='MLP vs Oracle', color='tab:orange', linewidth=2)
-	ax.fill_between(
-		x,
-		grouped['mean_error_mlp'] - grouped['std_error_mlp'],
-		grouped['mean_error_mlp'] + grouped['std_error_mlp'],
-		color='tab:orange',
-		alpha=0.2
-	)
-	
-	ax.set_title('Mean Absolute Error vs Min Hamming Distance')
-	ax.set_xlabel('Min Hamming Distance to Training Set')
-	ax.set_ylabel('Mean Absolute Error')
+	#ax.set_title('Mean Absolute Error vs Min Hamming Distance')
+	ax.set_xlabel('Min Hamming Distance to Training Set', fontsize=15)
+	ax.set_ylabel('Mean Absolute Error', fontsize=15)
 	ax.legend()
+
 	ax.grid(alpha=0.3)
 	
 	return ax

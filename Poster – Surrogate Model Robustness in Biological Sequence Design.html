@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Poster – Surrogate Model Robustness in Biological Sequence Design</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@300;400;600;700&family=Source+Serif+4:ital,wght@0,400;0,600;1,400&display=swap');
+
+  :root {
+    --blue:   #003366;
+    --blue2:  #005aaa;
+    --red:    #e8202a;
+    --amber:  #d97706;
+    --green:  #166534;
+    --bg:     #f3f6fb;
+    --card:   #ffffff;
+    --border: #c8d3e4;
+    --text:   #17192a;
+    --muted:  #58647a;
+    --tag:    #e4edf8;
+    --r:      6px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #7a8da0;
+    font-family: 'Source Sans 3', sans-serif;
+    font-size: 13.5px;   /* larger base — A0 print needs readable type */
+    color: var(--text);
+    line-height: 1.40;
+  }
+
+  .poster {
+    width: 1189px;
+    background: var(--bg);
+    margin: 24px auto;
+    box-shadow: 0 6px 40px rgba(0,0,0,.45);
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── HEADER ── */
+  header {
+    background: var(--blue);
+    color: #fff;
+    padding: 16px 22px 14px;
+    display: flex;
+    align-items: center;
+    gap: 18px;
+  }
+  .title-block { flex: 1; }
+  .poster-title {
+    font-family: 'Source Serif 4', serif;
+    font-size: 26px;
+    font-weight: 600;
+    line-height: 1.18;
+    margin-bottom: 9px;
+    color: #fff;
+  }
+  .poster-title em { color: #9fc6f0; font-style: normal; }
+  .meta {
+    font-size: 12.5px;
+    color: rgba(255,255,255,.82);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    align-items: center;
+  }
+  .meta strong { color: #fff; font-weight: 600; }
+  .meta .pill {
+    background: rgba(255,255,255,.13);
+    border: 1px solid rgba(255,255,255,.28);
+    border-radius: 20px;
+    padding: 2px 11px;
+  }
+
+  /* JKU logo */
+  .jku-logo {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    border: 1.5px solid rgba(255,255,255,.38);
+    border-radius: 7px;
+    padding: 10px 16px;
+  }
+  .jku-wordmark { font-size: 32px; font-weight: 700; letter-spacing: -.02em; color: #fff; line-height: 1; }
+  .jku-sub { font-size: 9.5px; color: rgba(255,255,255,.75); text-align: center; line-height: 1.35; }
+
+  
+  /* ── 3-COLUMN BODY ── */
+  .body {
+    display: grid;
+    grid-template-columns: 230px 1fr 1fr;
+    gap: 11px;
+    padding: 11px;
+    align-items: start;
+  }
+
+  /* ── CARDS ── */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    padding: 11px 13px;
+  }
+  .card + .card { margin-top: 0; }  /* gaps handled by flex gap */
+  .card.bl { border-left: 4px solid var(--blue2); }
+  .card.rl { border-left: 4px solid var(--red); }
+  .card.gl { border-left: 4px solid var(--green); }
+  .card.al { border-left: 4px solid var(--amber); }
+  .card.pl { border-left: 4px solid #7c3aed; }
+
+  .ct {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .07em;
+    color: var(--blue);
+    margin-bottom: 7px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .ct.red   { color: var(--red); }
+  .ct.green { color: var(--green); }
+
+  p  { margin-bottom: 5px; }
+  p:last-child { margin-bottom: 0; }
+  ul { padding-left: 1.2em; margin: 0; }
+  li { margin-bottom: 4px; }
+  li:last-child { margin-bottom: 0; }
+  strong { font-weight: 700; }
+
+  /* ── COLUMNS ── */
+  .col-left, .col-rq1, .col-rq2 { display: flex; flex-direction: column; gap: 10px; }
+
+  /* ── RQ SECTION HEADERS ── */
+  .rq-banner {
+    background: var(--blue);
+    color: #fff;
+    border-radius: var(--r) var(--r) 0 0;
+    padding: 8px 13px;
+    font-family: 'Source Serif 4', serif;
+    font-size: 15.5px;
+    font-weight: 600;
+    line-height: 1.2;
+  }
+  .rq-banner.rq2 { background: var(--green); }
+  .rq-banner .rq-num {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .1em;
+    opacity: .75;
+    display: block;
+    margin-bottom: 2px;
+  }
+  .rq-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    overflow: hidden;
+  }
+  .rq-card .rq-body { padding: 11px 13px; }
+
+  /* ── PIPELINE DIAGRAM ── */
+  .pipe-section-label {
+    font-size: 10px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: var(--blue2);
+    margin-bottom: 6px;
+    margin-top: 3px;
+  }
+  .pipe {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    flex-wrap: nowrap;
+  }
+  .pbox {
+    border: 1px solid;
+    border-radius: 5px;
+    padding: 5px 8px;
+    font-size: 10px;
+    font-weight: 600;
+    text-align: center;
+    line-height: 1.3;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .pbox small { display: block; font-weight: 400; font-size: 8.5px; color: inherit; opacity: .75; }
+  .pbox.b { background: var(--tag);  border-color: var(--blue2); color: var(--blue); }
+  .pbox.a { background: #fef3cd;     border-color: var(--amber); color: #7a4000; }
+  .pbox.r { background: #fdecea;     border-color: var(--red);   color: #7b0000; }
+  .pbox.g { background: #dcfce7;     border-color: #16a34a;      color: var(--green); }
+  .pbox.p { background: #f3e8ff;     border-color: #7c3aed;      color: #4c1d95; }
+  .arr { color: var(--muted); font-size: 17px; flex-shrink: 0; }
+  .pipe-note { font-size: 9.5px; color: var(--muted); margin-top: 5px; font-style: italic; }
+
+  .divider { border-top: 1px solid var(--border); margin: 9px 0; }
+
+  /* ── TABLES ── */
+  table { width: 100%; border-collapse: collapse; font-size: 11.5px; }
+  thead th {
+    background: var(--tag);
+    padding: 4px 7px;
+    text-align: left;
+    font-weight: 700;
+    font-size: 10.5px;
+    color: var(--blue);
+    border-bottom: 1px solid var(--border);
+  }
+  tbody td { padding: 4px 7px; border-bottom: 1px solid #edf0f5; }
+  tbody tr:last-child td { border-bottom: none; }
+  .hi  { color: #166534; font-weight: 700; }
+  .lo  { color: #991b1b; }
+  .mid { color: #b45309; }
+  .mu  { color: var(--muted); font-size: 10px; }
+
+  /* ── FINDING BOX ── */
+  .finding {
+    background: linear-gradient(135deg, #e4edf8 0%, #ede8f8 100%);
+    border: 1.5px solid var(--blue2);
+    border-radius: var(--r);
+    padding: 8px 11px;
+    font-size: 11.5px;
+  }
+  .finding.green { background: linear-gradient(135deg, #dcfce7 0%, #d1fae5 100%); border-color: #16a34a; }
+  .ft { font-weight: 700; color: var(--blue); font-size: 10.5px; text-transform: uppercase; letter-spacing: .05em; margin-bottom: 4px; }
+  .ft.green { color: var(--green); }
+
+  /* ── SECTION LABEL within card ── */
+  .sec-label {
+    font-size: 10px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: .07em;
+    padding: 4px 0 5px;
+    border-bottom: 1.5px solid var(--border);
+    margin-bottom: 8px;
+  }
+  .sec-label.blue  { color: var(--blue2); border-color: var(--blue2); }
+  .sec-label.green { color: var(--green); border-color: var(--green); }
+
+  /* ── REFS ── */
+  .refs { font-size: 9.5px; color: var(--muted); line-height: 1.55; }
+
+  /* ── FOOTER ── */
+  footer {
+    background: var(--blue);
+    color: rgba(255,255,255,.72);
+    padding: 6px 22px;
+    font-size: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  footer strong { color: #fff; }
+
+  /* inline highlight chip */
+  .chip {
+    display: inline-block;
+    background: var(--tag);
+    border: 1px solid var(--blue2);
+    border-radius: 3px;
+    padding: 1px 6px;
+    font-size: 9.5px;
+    font-weight: 700;
+    color: var(--blue);
+    vertical-align: middle;
+  }
+  .chip.red   { background: #fdecea; border-color: var(--red);   color: #7b0000; }
+  .chip.green { background: #dcfce7; border-color: #16a34a;      color: var(--green); }
+
+  @media print {
+    body { background: none; }
+    .poster { margin: 0; box-shadow: none; }
+  }
+</style>
+</head>
+<body>
+<div class="poster">
+
+<!-- ════════════════════════════ HEADER ════════════════════════════ -->
+<header>
+  <div class="title-block">
+    <div class="poster-title">
+      Surrogate Model Robustness in <em>Biological Sequence Design</em><br>under Distributional Shift
+    </div>
+    <div class="meta">
+      <span class="pill"><strong>Michael Meier</strong></span>
+      <span>Supervisor: <strong>Name</strong></span>
+      <span>Co-Supervisor: <strong>name</strong></span>
+      <span>Institute for Machine Learning · JKU Linz · 2026</span>
+    </div>
+  </div>
+  <div class="jku-logo" style="background:#fff;border-radius:7px;padding:8px 14px;border:none;">
+    <img src="plots/JKU_Logo.svg" style="height:52px;width:auto;display:block;" alt="JKU Logo">
+  </div>
+</header>
+<div class="stripe"></div>
+
+<!-- ════════════════════════════ BODY ════════════════════════════ -->
+<div class="body">
+
+<!-- ══════════ LEFT COLUMN — Context ══════════ -->
+<div class="col-left">
+
+  <div class="card">
+    <div class="ct">🔥 Motivation</div>
+    <p>Biological sequence design — finding DNA or protein sequences with high fitness — is central to drug discovery, enzyme engineering, and synthetic biology.</p>
+    <p><strong>Surrogate models</strong> approximate expensive experimental measurements (oracle calls) to guide optimization cheaply.</p>
+    <p>But optimizers actively push candidates into <strong>out-of-distribution (OOD) regions</strong> far from training data. Do surrogates remain reliable there?</p>
+  </div>
+
+  <div class="card">
+    <div class="ct">🧬 Datasets</div>
+    <p><strong>TFBind8</strong> — DNA 8-mers, fully measured binding activity between transcription factors. All possible designs are evaluated.</p>
+    <p style="margin-top:5px"><strong>GB1</strong> — Protein G domain B1, single and double mutations labeld with IgG-FC binding strength. Our labels come from a MLP oracle trained on the original labels.</p>
+    <div style="margin-top:7px;padding:5px 8px;background:var(--tag);border-radius:4px;font-size:11px;">
+      <strong>Train regime:</strong> Surrogates see only the <strong>bottom 50% by fitness</strong> — realistic proxy for early-stage optimization where high-fitness examples are unknown.
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="ct">⚙️ Surrogate Models</div>
+    <p><strong>MLP</strong> — Multi-layer perceptron with single layer of 100 units and ReLU activation. Parametric model, extrapolates more agressively into unseen regions.</p>
+    <p style="margin-top:5px"><strong>RF</strong> — Random Forest; non parametric ensemble, aggreagate across correlated decision trees, conservative predicitons.</p>
+  </div>
+
+  <div class="card">
+    <div class="ct">🤖 Optimizers (RQ2)</div>
+    <ul>
+      <li><strong>SMW</strong> — Single-mutant walk; random mutations scored by surrogate. Simple baseline.</li>
+      <li><strong>RL-LSTM</strong> — Pre-trained generative LSTM fine-tuned via goal-directed RL with surrogate reward; broader exploration.</li>
+      <li><strong>GFlowNet</strong> — Samples proportional to fitness score; promotes candidate diversity (Jain et al., 2022).</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <div class="ct">📚 References</div>
+    <div class="refs">
+      [1] Jain et al. (2022). Biological Sequence Design with GFlowNets. <em>NeurIPS</em>.<br>
+      [2] Angermueller et al. (2020). Population-Based Black-Box Optimization. <em>ICLR</em>.<br>
+      [3] Trabucco et al. (2022). DesignBench. <em>ICML</em>.<br>
+      [4] Kim et al. (2025). Improved Off-Policy RL in Biological Sequence Design.<br>
+      [5] Brookes &amp; Listgarten (2020). Design by Adaptive Sampling.
+    </div>
+  </div>
+
+</div><!-- /col-left -->
+
+<!-- ══════════ RQ1 COLUMN ══════════ -->
+<div class="col-rq1">
+
+  <!-- RQ banner -->
+  <div class="rq-card">
+    <div class="rq-banner">
+      <span class="rq-num">Research Question 1</span>
+      How well do surrogate models generalize as Hamming distance from training data increases?
+    </div>
+    <div class="rq-body">
+      <p>Surrogates are trained on low-fitness sequences, but optimizers push candidates further away. We measure generalization by computing predictions on holdout sequences stratified by <strong>minimum Hamming distance</strong> from the training set, then comparing to oracle scores.</p>
+    </div>
+  </div>
+
+  <!-- Experiment Setup -->
+  <div class="card">
+    <div class="sec-label blue">Experiment Setup</div>
+
+    <div class="pipe-section-label">TFBind8 — Full Landscape</div>
+    <div class="pipe">
+      <div class="pbox a">Bottom 50%<small>train split</small></div>
+      <div class="arr">→</div>
+      <div class="pbox b">Fit MLP &amp; RF</div>
+      <div class="arr">→</div>
+      <div class="pbox g">Top 50%<small>OOD holdout</small></div>
+      <div class="arr">→</div>
+      <div class="pbox r">Score by HD<small>ρ · MAE · Bias</small></div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="pipe-section-label">GB1 — Generated Test Sequences</div>
+    <div class="pipe">
+      <div class="pbox a">Bottom 50%<small>train split</small></div>
+      <div class="arr">→</div>
+      <div class="pbox b">Fit MLP &amp; RF</div>
+      <div class="arr">→</div>
+      <div class="pbox p">SMW mutants<small>HD 1–33</small></div>
+      <div class="arr">→</div>
+      <div class="pbox r">Score by HD<small>ρ · MAE · Bias</small></div>
+    </div>
+    <p class="pipe-note">GB1 note: exhaustive enumeration is infeasible. A single-mutant walk on training sequences generates 56k test sequences spanning a wide range of Hamming distances, enabling controlled OOD evaluation.</p>
+  </div>
+
+  <!-- Results -->
+  <div class="card">
+    <div class="sec-label blue">Results — OOD Generalization by Hamming Distance</div>
+
+    <!-- Two plots stacked -->
+    <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:10px;">
+      <div>
+        <div style="font-size:10.5px;font-weight:700;color:var(--blue);text-align:center;margin-bottom:4px;">TFBind8 — MLP vs RF</div>
+        <img src="plots/RQ1-tf_bind8-MLP_vs_RFpng.png" style="width:100%;display:block;border-radius:4px;" alt="RQ1 TFBind8 MLP vs RF">
+      </div>
+      <div>
+        <div style="font-size:10.5px;font-weight:700;color:var(--blue);text-align:center;margin-bottom:4px;">GB1 — MLP vs RF</div>
+        <img src="plots/RQ1-gb1_MLP_vs_RF.png" style="width:100%;display:block;border-radius:4px;" alt="RQ1 GB1 MLP vs RF">
+      </div>
+    </div>
+
+    <!-- Summary table -->
+    <table>
+      <thead>
+        <tr>
+          <th>Model</th>
+          <th>HD=1 · ρ</th>
+          <th>HD=2 · ρ</th>
+          <th>HD=3 · ρ</th>
+          <th>HD=4 · ρ</th>
+          <th>Bias direction</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>MLP</strong></td>
+          <td class="mid">0.345</td>
+          <td class="mid">0.276</td>
+          <td class="lo">0.206</td>
+          <td class="lo">0.041</td>
+          <td class="mu">Negative (underestimates)</td>
+        </tr>
+        <tr>
+          <td><strong>RF</strong></td>
+          <td class="hi">0.393</td>
+          <td class="hi">0.381</td>
+          <td class="hi">0.351</td>
+          <td class="hi">0.322</td>
+          <td class="mu">Negative, grows with HD</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Key Insights RQ1 -->
+  <div class="finding">
+    <div class="ft">💡 Key Insights — RQ1</div>
+    <p><strong>RF clearly outperforms MLP</strong> at high Hamming distance (ρ 0.32 vs 0.04 at HD=4). RF's ensemble averaging acts as a natural OOD regularizer, preventing aggressive extrapolation — whereas MLP collapses almost entirely at HD=4.</p>
+    <p style="margin-top:5px">Both models show a <strong>systematic negative bias</strong>: they consistently underestimate the fitness of OOD sequences. Since training data is restricted to the bottom 50%, surrogates have never seen truly high-fitness examples and regress toward the low-fitness mean — producing conservative but systematically wrong predictions in OOD regions.</p>
+  </div>
+
+</div><!-- /col-rq1 -->
+
+<!-- ══════════ RQ2 COLUMN ══════════ -->
+<div class="col-rq2">
+
+  <!-- RQ banner -->
+  <div class="rq-card">
+    <div class="rq-banner rq2">
+      <span class="rq-num">Research Question 2</span>
+      How effectively do different optimization strategies find high-fitness sequences when guided by a surrogate?
+    </div>
+    <div class="rq-body">
+      <p>We compare three optimizers — SMW, RL-LSTM, and GFlowNet — on their ability to find genuinely high-fitness sequences using an MLP surrogate as the reward signal. All candidates are scored by the ground-truth oracle after optimization.</p>
+    </div>
+  </div>
+
+  <!-- Experiment Setup -->
+  <div class="card">
+    <div class="sec-label green">Experiment Setup</div>
+    <div class="pipe">
+      <div class="pbox a">Bottom 50%<small>train split</small></div>
+      <div class="arr">→</div>
+      <div class="pbox b">Fit MLP<small>surrogate</small></div>
+      <div class="arr">→</div>
+      <div class="pbox b">Run optimizer<small>SMW / RL / GFN</small></div>
+      <div class="arr">→</div>
+      <div class="pbox g">Candidates<small>generated seqs</small></div>
+      <div class="arr">→</div>
+      <div class="pbox r">Oracle score<small>ground truth</small></div>
+    </div>
+    <p class="pipe-note" style="margin-top:6px"><strong>10 independent runs</strong> (different random seeds) per optimizer–dataset combination. Metric: maximum oracle score achieved across all generated candidates per run.</p>
+    <div style="margin-top:8px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;">
+      <div style="background:var(--tag);border:1px solid var(--blue2);border-radius:5px;padding:6px 8px;font-size:10.5px;">
+        <strong style="color:var(--blue);display:block;margin-bottom:2px;">SMW</strong>
+        Random single-site mutations; greedy surrogate-guided walk. Simple OOD stress test.
+      </div>
+      <div style="background:#fef3cd;border:1px solid var(--amber);border-radius:5px;padding:6px 8px;font-size:10.5px;">
+        <strong style="color:#7a4000;display:block;margin-bottom:2px;">RL-LSTM</strong>
+        Generative LSTM; policy trained via surrogate reward. Broader exploration of sequence space.
+      </div>
+      <div style="background:#dcfce7;border:1px solid #16a34a;border-radius:5px;padding:6px 8px;font-size:10.5px;">
+        <strong style="color:var(--green);display:block;margin-bottom:2px;">GFlowNet</strong>
+        Samples proportional to surrogate fitness. Balances quality and diversity of candidates.
+      </div>
+    </div>
+  </div>
+
+  <!-- Results -->
+  <div class="card">
+    <div class="sec-label green">Results</div>
+
+    <!-- Bar chart -->
+    <div style="font-size:10.5px;font-weight:700;color:var(--blue);text-align:center;margin-bottom:5px;">Max Oracle Score — TFBind8 (mean ± std, 10 runs)</div>
+    <svg width="100%" viewBox="0 0 420 155" xmlns="http://www.w3.org/2000/svg" style="display:block">
+      <!-- axes -->
+      <line x1="50" y1="10" x2="50"  y2="120" stroke="#aaa" stroke-width="1"/>
+      <line x1="50" y1="120" x2="415" y2="120" stroke="#aaa" stroke-width="1"/>
+      <!-- y: 0→120, 1.0→10; 110px/1.0 = 110px/unit; y_px=120-val*110 -->
+      <line x1="49" y1="120" x2="415" y2="120" stroke="#e5e8f0" stroke-width=".8"/>
+      <line x1="49" y1="98"  x2="415" y2="98"  stroke="#e5e8f0" stroke-width=".8"/> <!-- 0.2 -->
+      <line x1="49" y1="76"  x2="415" y2="76"  stroke="#e5e8f0" stroke-width=".8"/> <!-- 0.4 -->
+      <line x1="49" y1="54"  x2="415" y2="54"  stroke="#e5e8f0" stroke-width=".8"/> <!-- 0.6 -->
+      <line x1="49" y1="32"  x2="415" y2="32"  stroke="#e5e8f0" stroke-width=".8"/> <!-- 0.8 -->
+      <line x1="49" y1="10"  x2="415" y2="10"  stroke="#e5e8f0" stroke-width=".8"/> <!-- 1.0 -->
+      <text x="47" y="122" text-anchor="end" font-size="8.5" fill="#777">0.0</text>
+      <text x="47" y="100" text-anchor="end" font-size="8.5" fill="#777">0.2</text>
+      <text x="47" y="78"  text-anchor="end" font-size="8.5" fill="#777">0.4</text>
+      <text x="47" y="56"  text-anchor="end" font-size="8.5" fill="#777">0.6</text>
+      <text x="47" y="34"  text-anchor="end" font-size="8.5" fill="#777">0.8</text>
+      <text x="47" y="12"  text-anchor="end" font-size="8.5" fill="#777">1.0</text>
+      <text x="232" y="147" text-anchor="middle" font-size="9" fill="#555">Optimizer · TFBind8</text>
+      <text x="17"  y="68"  text-anchor="middle" font-size="9" fill="#555" transform="rotate(-90,17,68)">Max Oracle Score</text>
+
+      <!-- SMW: 0.859 → y=120-94.5=25.5 → bar from 25 to 120, h=94.5 -->
+      <!-- 3 groups centered at x=115, 232, 348; bar width=60 -->
+      <rect x="85" y="26" width="60" height="94" fill="#005aaa" rx="3" opacity=".9"/>
+      <text x="115" y="22" text-anchor="middle" font-size="9.5" fill="#005aaa" font-weight="700">0.859</text>
+      <text x="115" y="134" text-anchor="middle" font-size="9.5" fill="#333" font-weight="600">SMW</text>
+      <!-- error bar std=0.101→11.1px -->
+      <line x1="115" y1="15" x2="115" y2="37" stroke="#003366" stroke-width="1.8"/>
+      <line x1="106" y1="15" x2="124" y2="15" stroke="#003366" stroke-width="1.8"/>
+      <line x1="106" y1="37" x2="124" y2="37" stroke="#003366" stroke-width="1.8"/>
+
+      <!-- RL: 0.927 → y=120-101.97=18.0, h=102 -->
+      <rect x="202" y="18" width="60" height="102" fill="#e8202a" rx="3" opacity=".9"/>
+      <text x="232" y="13" text-anchor="middle" font-size="9.5" fill="#c0000f" font-weight="700">0.927</text>
+      <text x="232" y="134" text-anchor="middle" font-size="9.5" fill="#333" font-weight="600">RL-LSTM</text>
+      <!-- error bar std=0.064→7px -->
+      <line x1="232" y1="11" x2="232" y2="25" stroke="#8b0000" stroke-width="1.8"/>
+      <line x1="223" y1="11" x2="241" y2="11" stroke="#8b0000" stroke-width="1.8"/>
+      <line x1="223" y1="25" x2="241" y2="25" stroke="#8b0000" stroke-width="1.8"/>
+
+      <!-- GFN: 0.972 → y=120-106.92=13.1, h=107 -->
+      <rect x="318" y="13" width="60" height="107" fill="#166534" rx="3" opacity=".9"/>
+      <text x="348" y="9" text-anchor="middle" font-size="9.5" fill="#14532d" font-weight="700">0.972</text>
+      <text x="348" y="134" text-anchor="middle" font-size="9.5" fill="#333" font-weight="600">GFlowNet</text>
+      <text x="348" y="143" text-anchor="middle" font-size="8" fill="#999">(1 run)</text>
+    </svg>
+
+    <!-- Summary tables: TFBind8 + GB1 -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px;">
+      <div>
+        <div style="font-size:10px;font-weight:700;color:var(--blue2);margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em;">TFBind8</div>
+        <table>
+          <thead><tr><th>Optimizer</th><th>Max Oracle ± std</th></tr></thead>
+          <tbody>
+            <tr><td>SMW</td>        <td class="mid">0.859 ± 0.101</td></tr>
+            <tr><td>RL-LSTM</td>    <td class="hi">0.927 ± 0.064</td></tr>
+            <tr><td>GFlowNet</td>   <td class="hi">0.972 <span class="mu">(1 run)</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div>
+        <div style="font-size:10px;font-weight:700;color:var(--green);margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em;">GB1</div>
+        <table>
+          <thead><tr><th>Optimizer</th><th>Max Oracle ± std</th></tr></thead>
+          <tbody>
+            <tr><td>SMW</td>      <td class="mid">1.24 ± 0.67</td></tr>
+            <tr><td>RL-LSTM</td>  <td><span style="color:#dc2626;font-weight:700;">9.32 ± 0.00</span> <span style="font-size:10px">⚠</span></td></tr>
+            <tr><td>GFlowNet</td> <td class="mu">— (pending)</td></tr>
+          </tbody>
+        </table>
+        <div style="margin-top:5px;padding:4px 7px;background:#fef9c3;border:1px solid #ca8a04;border-radius:4px;font-size:10px;color:#7a4000;">
+          ⚠ RL score of 9.32 indicates <strong>surrogate exploitation</strong> — the policy learns to fool the MLP, not find true high-fitness sequences.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Key Insights RQ2 -->
+  <div class="finding green">
+    <div class="ft green">💡 Key Insights — RQ2</div>
+    <p>On <strong>TFBind8</strong>: GFlowNet &gt; RL-LSTM &gt; SMW. Learned generation strategies substantially outperform the naive mutation walk by exploring broader sequence space rather than greedily following surrogate gradients.</p>
+    <p style="margin-top:5px">On <strong>GB1</strong>: the RL-LSTM achieves an anomalously high oracle score of 9.32 (vs SMW at 1.24), exposing critical <strong>surrogate exploitation</strong>. On this epistatically complex landscape the MLP surrogate is unreliable at high Hamming distance (as RQ1 confirms), and the RL policy learns to generate sequences that maximally fool the surrogate — not genuinely high-fitness sequences. This directly links RQ1 and RQ2: surrogate breakdown at high OOD distance translates to optimizer failure in complex landscapes.</p>
+  </div>
+
+</div><!-- /col-rq2 -->
+
+</div><!-- /body -->
+
+<!-- ════════════════════════════ FOOTER ════════════════════════════ -->
+<footer>
+  <span>Master's Thesis · Institute for Machine Learning · <strong>Johannes Kepler University Linz</strong> · 2025</span>
+  <span><strong>meiermichael207@gmail.com</strong></span>
+</footer>
+
+</div><!-- /poster -->
+<!-- Code injected by live-server -->
+<script>
+	// <![CDATA[  <-- For SVG support
+	if ('WebSocket' in window) {
+		(function () {
+			function refreshCSS() {
+				var sheets = [].slice.call(document.getElementsByTagName("link"));
+				var head = document.getElementsByTagName("head")[0];
+				for (var i = 0; i < sheets.length; ++i) {
+					var elem = sheets[i];
+					var parent = elem.parentElement || head;
+					parent.removeChild(elem);
+					var rel = elem.rel;
+					if (elem.href && typeof rel != "string" || rel.length == 0 || rel.toLowerCase() == "stylesheet") {
+						var url = elem.href.replace(/(&|\?)_cacheOverride=\d+/, '');
+						elem.href = url + (url.indexOf('?') >= 0 ? '&' : '?') + '_cacheOverride=' + (new Date().valueOf());
+					}
+					parent.appendChild(elem);
+				}
+			}
+			var protocol = window.location.protocol === 'http:' ? 'ws://' : 'wss://';
+			var address = protocol + window.location.host + window.location.pathname + '/ws';
+			var socket = new WebSocket(address);
+			socket.onmessage = function (msg) {
+				if (msg.data == 'reload') window.location.reload();
+				else if (msg.data == 'refreshcss') refreshCSS();
+			};
+			if (sessionStorage && !sessionStorage.getItem('IsThisFirstTime_Log_From_LiveServer')) {
+				console.log('Live reload enabled.');
+				sessionStorage.setItem('IsThisFirstTime_Log_From_LiveServer', true);
+			}
+		})();
+	}
+	else {
+		console.error('Upgrade your browser. This Browser is NOT supported WebSocket for Live-Reloading.');
+	}
+	// ]]>
+</script>
+</body>
+</html>

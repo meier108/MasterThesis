@@ -88,23 +88,28 @@ def compute_model_metrics(df, target_col='oracle_score', rf_pred_col='rf_predict
     '''
     
     # Random Forest metrics
+    residuals_rf = df[target_col] - df[rf_pred_col]
     spearmanr_rf = spearmanr(df[target_col], df[rf_pred_col])
     mse_rf = mean_squared_error(df[target_col], df[rf_pred_col])
-    bias_rf = (df[target_col] - df[rf_pred_col]).mean()
-    variance_rf = ((df[rf_pred_col] - df[rf_pred_col].mean()) ** 2).mean()
-    
+    bias_rf = residuals_rf.mean()
+    std_rf = residuals_rf.std()
+    variance_rf = residuals_rf.var()
+
     # MLP metrics
+    residuals_mlp = df[target_col] - df[mlp_pred_col]
     spearmanr_mlp = spearmanr(df[target_col], df[mlp_pred_col])
     mse_mlp = mean_squared_error(df[target_col], df[mlp_pred_col])
-    bias_mlp = (df[target_col] - df[mlp_pred_col]).mean()
-    variance_mlp = ((df[mlp_pred_col] - df[mlp_pred_col].mean()) ** 2).mean()
-    
+    bias_mlp = residuals_mlp.mean()
+    std_mlp = residuals_mlp.std()
+    variance_mlp = residuals_mlp.var()
+
     # Create results dataframe for nice table display
     results = pd.DataFrame({
         'Model': ['Random Forest', 'MLP'],
         'Spearman ρ': [spearmanr_rf.correlation, spearmanr_mlp.correlation],
         'MSE': [mse_rf, mse_mlp],
         'Bias': [bias_rf, bias_mlp],
+        'Std': [std_rf, std_mlp],
         'Variance': [variance_rf, variance_mlp]
     })
     
@@ -112,7 +117,7 @@ def compute_model_metrics(df, target_col='oracle_score', rf_pred_col='rf_predict
     print("\n" + "="*80)
     print("MODEL PERFORMANCE METRICS")
     print("="*80)
-    for col in ['Spearman ρ', 'MSE', 'Bias', 'Variance']:
+    for col in ['Spearman ρ', 'MSE', 'Bias', 'Std', 'Variance']:
         results[col] = results[col].apply(lambda x: f'{x:.4f}')
     print(results.to_string(index=False))
     print("="*80 + "\n")
