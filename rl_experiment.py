@@ -35,16 +35,18 @@ class RLExperiment(BaseExperiment):
         """Initialize oracle, surrogate (MLP), pretrain LSTM."""
         np.random.seed(self.seed)
         torch.manual_seed(self.seed)
-        
+        print(f"after set_seed:    {hash(torch.get_rng_state().numpy().tobytes())}")
         if self.config.dataset == "tfbind8":
             self._setup_tfbind8()
         elif self.config.dataset == "gb1":
             self._setup_gb1()
+            print(f"after _setup_gb1:  {hash(torch.get_rng_state().numpy().tobytes())}")
         else:
             raise ValueError(f"Unknown dataset: {self.config.dataset}")
         
         # Train MLP surrogate
         self.surrogate = mlp.MLPModel()
+       
         X_train_one_hot = np.stack([
             one_hot_encode_sequence(seq, num_tokens=len(self.token_to_idx)) 
             for seq in self.X_train
@@ -60,7 +62,6 @@ class RLExperiment(BaseExperiment):
             hidden_dim=128,
         )
         self._pretrain_lstm()
-        
         # Prepare training data for Hamming distance computation
         self.X_train_encoded = self.X_train.copy()
     
@@ -86,7 +87,7 @@ class RLExperiment(BaseExperiment):
         """Setup GB1 dataset."""
         alphabet = list("ACDEFGHIKLMNPQRSTVWY")
         self.token_to_idx = {token: idx for idx, token in enumerate(alphabet)}
-        
+        print(f"rng 1: {hash(torch.get_rng_state().numpy().tobytes())}")
         df = load_data(name="gb1")
         self.train_df = df[df["split"] == "train"].copy()
         
@@ -96,19 +97,24 @@ class RLExperiment(BaseExperiment):
             num_tokens=len(self.token_to_idx)
         )
         L = one_hot_sequence.shape[0]
-        
+        print(f"rng 2: {hash(torch.get_rng_state().numpy().tobytes())}")
         self.oracle = oracle.load_GB1_oracle()
         
+        #Oracle uses a fixed seed, this overrides rng therefore we need to reset it
+        np.random.seed(self.seed)
+        torch.manual_seed(self.seed)
+
         # Prepare training data
         self.X_train = np.array([
             encode_sequence(seq, self.token_to_idx) 
             for seq in self.train_df["sequence"]
         ])
-        
+        print(f"rng 3: {hash(torch.get_rng_state().numpy().tobytes())}")
         # Score training sequences with oracle
         self.y_train = self.oracle.score_batch(self.train_df["sequence"])
         self.max_score = self.y_train.max()
-    
+        print(f"rng 4: {hash(torch.get_rng_state().numpy().tobytes())}")
+
     def _pretrain_lstm(self):
         """Pretrain LSTM on training data."""
         X_train_tensor = torch.LongTensor(self.X_train)
@@ -213,6 +219,8 @@ class RLExperiment(BaseExperiment):
         
         # Generate sequences
         new_sequences = []
+        # TODO: Reset seed because of RNG problem
+        #torch.manual_seed(self.seed)
         for _ in range(self.rl_config.batch_size):
             seq = self.lstm_model.generate(goal_score=self.max_score, temperature=temp) #TODO: goal:socre changed from 1.1 to 0.5
             new_sequences.append(seq)
@@ -295,6 +303,9 @@ class RLExperiment(BaseExperiment):
         # Retrain LSTM on selected + replay
         self._retrain_lstm_with_replay(top_sequences, top_surrogate_scores)
         
+        print(f"iter={iteration} seed={self.seed} max_score={self.max_score:.4f} "
+                f"rng_hash={hash(torch.get_rng_state().numpy().tobytes())}")
+
         return records
     
     def _retrain_lstm_with_replay(self, selected_sequences, selected_scores):
