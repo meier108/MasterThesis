@@ -29,18 +29,18 @@ class RLExperiment(BaseExperiment):
         self.seen_sequences = set() # For diversity filtering
         # For diversity filtering during iterations
         self.all_generated_sequences = []
-        self.max_score = 1.0
+        self.max_score = 1
         
     def setup(self):
         """Initialize oracle, surrogate (MLP), pretrain LSTM."""
         np.random.seed(self.seed)
         torch.manual_seed(self.seed)
-        print(f"after set_seed:    {hash(torch.get_rng_state().numpy().tobytes())}")
+        
         if self.config.dataset == "tfbind8":
             self._setup_tfbind8()
         elif self.config.dataset == "gb1":
             self._setup_gb1()
-            print(f"after _setup_gb1:  {hash(torch.get_rng_state().numpy().tobytes())}")
+           
         else:
             raise ValueError(f"Unknown dataset: {self.config.dataset}")
         
@@ -87,33 +87,24 @@ class RLExperiment(BaseExperiment):
         """Setup GB1 dataset."""
         alphabet = list("ACDEFGHIKLMNPQRSTVWY")
         self.token_to_idx = {token: idx for idx, token in enumerate(alphabet)}
-        print(f"rng 1: {hash(torch.get_rng_state().numpy().tobytes())}")
+        
         df = load_data(name="gb1")
         self.train_df = df[df["split"] == "train"].copy()
-        
-        # Get sequence length
-        one_hot_sequence = one_hot_encode_sequence(
-            encode_sequence(self.train_df['sequence'].iloc[0], self.token_to_idx),
-            num_tokens=len(self.token_to_idx)
-        )
-        L = one_hot_sequence.shape[0]
-        print(f"rng 2: {hash(torch.get_rng_state().numpy().tobytes())}")
+                
         self.oracle = oracle.load_GB1_oracle()
         
         #Oracle uses a fixed seed, this overrides rng therefore we need to reset it
         np.random.seed(self.seed)
         torch.manual_seed(self.seed)
-
         # Prepare training data
         self.X_train = np.array([
             encode_sequence(seq, self.token_to_idx) 
             for seq in self.train_df["sequence"]
         ])
-        print(f"rng 3: {hash(torch.get_rng_state().numpy().tobytes())}")
         # Score training sequences with oracle
         self.y_train = self.oracle.score_batch(self.train_df["sequence"])
-        self.max_score = self.y_train.max()
-        print(f"rng 4: {hash(torch.get_rng_state().numpy().tobytes())}")
+        self.max_score = self.y_train.max() + 5.0 #Set the max score above the known maximum, we want to get higher scoring sequences!
+
 
     def _pretrain_lstm(self):
         """Pretrain LSTM on training data."""
@@ -222,7 +213,7 @@ class RLExperiment(BaseExperiment):
         # TODO: Reset seed because of RNG problem
         #torch.manual_seed(self.seed)
         for _ in range(self.rl_config.batch_size):
-            seq = self.lstm_model.generate(goal_score=self.max_score, temperature=temp) #TODO: goal:socre changed from 1.1 to 0.5
+            seq = self.lstm_model.generate(goal_score=self.max_score, temperature=temp)
             new_sequences.append(seq)
         
         new_sequences_np = np.array(new_sequences)
@@ -236,7 +227,7 @@ class RLExperiment(BaseExperiment):
             self._evaluate_oracle(seq) for seq in new_sequences_np
         ])
 
-        self.max_score = max(self.max_score, surrogate_scores.max()) #Changed from oracle_scores.max() to surrogate scores, as we dont know oracle scores
+        #self.max_score = max(self.max_score, surrogate_scores.max()) #Changed from oracle_scores.max() to surrogate scores, as we dont know oracle scores
         # Select top 20% by surrogate score
         threshold = np.percentile(surrogate_scores, 80)
         top_mask = surrogate_scores >= threshold
@@ -250,8 +241,6 @@ class RLExperiment(BaseExperiment):
                 top_sequences, top_surrogate_scores, top_oracle_scores,
                 min_hamming=self.rl_config.min_hamming
             )
-        
-        # TODO: Filter out sequences already seen in previous iterations
         
         new_mask = []
         for i, seq_encoded in enumerate(top_sequences):
@@ -302,9 +291,6 @@ class RLExperiment(BaseExperiment):
         
         # Retrain LSTM on selected + replay
         self._retrain_lstm_with_replay(top_sequences, top_surrogate_scores)
-        
-        print(f"iter={iteration} seed={self.seed} max_score={self.max_score:.4f} "
-                f"rng_hash={hash(torch.get_rng_state().numpy().tobytes())}")
 
         return records
     

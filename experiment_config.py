@@ -56,7 +56,7 @@ class ExperimentConfig:
     method: str  # "smw" or "rl"
     dataset: str  # "tfbind8" or "gb1"
     seed: int = 42
-    num_runs: int = 3 #TODO: Change back to 10 for final experiments
+    num_runs: int = 10
     
     # Method-specific configs
     smw_config: Optional[SMWConfig] = None
@@ -108,8 +108,8 @@ EXPERIMENT_CONFIGS: Dict[str, ExperimentConfig] = {
         dataset="gb1",
         rl_config=RLConfig(
             transcription_factor=None,
-            num_iterations=5, #Changed from 15 to 5 for GB1 TODO
-            batch_size=265,  # Smaller for GB1
+            num_iterations=15,
+            batch_size=265, 
         ),
     ),
     "gfn_tfbind8": ExperimentConfig(
